@@ -44,7 +44,9 @@ $hits    = $mcp->search( 'content security policy', limit: 10 );
 | `listTopics()` | `list_topics` | `array<McpTopic>` in canonical spec order |
 | `getTopic()` | `get_topic` | `McpTopic` including `markdown` and `updatedAt` |
 | `getChanges()` | `get_changes` | `McpChangeSet` (newest first) |
-| `search()` | `search` | `array<McpTopic>`, most relevant first. The limit is clamped to 1–25 |
+| `search()` | `search` | `array<McpTopic>`, most relevant first |
+
+Limits are clamped to the ranges the server accepts: 1–200 for `listTopics()` (pass `null` for all topics), 1–100 for `getChanges()`, and 1–25 for `search()`.
 
 ### Slugs
 

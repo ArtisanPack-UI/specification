@@ -90,7 +90,7 @@ final class HttpMcpClient implements McpClient
         $content = $this->call( 'list_topics', array_filter( [
             'category' => $category,
             'status'   => $status?->value,
-            'limit'    => $limit,
+            'limit'    => null === $limit ? null : max( 1, min( 200, $limit ) ),
         ], static fn ( mixed $value ): bool => null !== $value ) );
 
         return $this->topics( $content['topics'] ?? null, 'topics' );
@@ -130,7 +130,7 @@ final class HttpMcpClient implements McpClient
         return McpChangeSet::fromArray( $this->call( 'get_changes', array_filter( [
             'since' => $since,
             'type'  => $type?->value,
-            'limit' => $limit,
+            'limit' => null === $limit ? null : max( 1, min( 100, $limit ) ),
         ], static fn ( mixed $value ): bool => null !== $value ) ) );
     }
 
@@ -231,7 +231,7 @@ final class HttpMcpClient implements McpClient
         if ( is_array( $message['error'] ?? null ) ) {
             throw new McpRequestException( __( 'The MCP tool [:tool] returned an error: :message', [
                 'tool'    => $tool,
-                'message' => (string) ( $message['error']['message'] ?? __( 'Unknown error' ) ),
+                'message' => is_string( $message['error']['message'] ?? null ) ? $message['error']['message'] : __( 'Unknown error' ),
             ] ) );
         }
 
