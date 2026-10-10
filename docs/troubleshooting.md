@@ -34,7 +34,13 @@ The SQLite index file could not be opened, or your SQLite build lacks FTS5. Chec
 
 ### Search returns nothing after a sync
 
-Run `php artisan keystone:spec-sync` again. If the index version is stale, it is rebuilt even when the archive hasn't changed.
+`search()` rebuilds a stale or empty index from the topic rows before it searches, so this usually fixes itself on the next search. If it doesn't, check that the database has topics (`Topic::query()->count()`) and run `php artisan keystone:spec-sync`. Re-running it rebuilds a stale index even when the archive hasn't changed.
+
+## Multi-server Deployments
+
+Topic and snapshot rows live in your shared database, but the search index and the vendored snapshot are files under `storage_path()` on each server. The scheduled sync runs on one server only. On every other server (and after a deploy to a fresh or ephemeral filesystem) the first `search()` call finds that the local index doesn't match the current snapshot and rebuilds it from the database, under a short cache lock so concurrent requests don't all rebuild at once. The cache lock only coordinates requests that share a cache store.
+
+If you'd rather build the index once and share it, point `artisanpack.specification.index.path` (`SPECIFICATION_INDEX_PATH`) at shared storage. The on-disk snapshot is only an offline copy of the archive. Nothing reads it at request time, so it doesn't need to be shared.
 
 ## Checks
 
