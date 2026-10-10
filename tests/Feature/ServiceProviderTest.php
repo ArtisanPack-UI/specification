@@ -77,7 +77,8 @@ it( 'registers the weekly sync with the scheduler', function (): void {
 it( 'creates the topics and snapshots tables', function (): void {
     expect( Schema::hasTable( 'specification_topics' ) )->toBeTrue()
         ->and( Schema::hasTable( 'specification_snapshots' ) )->toBeTrue()
-        ->and( Schema::hasColumn( 'specification_snapshots', 'changes' ) )->toBeTrue();
+        ->and( Schema::hasColumn( 'specification_snapshots', 'changes' ) )->toBeTrue()
+        ->and( glob( __DIR__ . '/../../database/migrations/*.php' ) )->toHaveCount( 2 );
 } );
 
 it( 'registers the keystone artisan commands', function (): void {
