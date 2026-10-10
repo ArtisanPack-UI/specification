@@ -17,6 +17,7 @@ title: Specification Class
 | `report( iterable $results )` | `SpecReport` | Builds a four-tier report |
 | `render( Topic $topic, RenderSurface $surface = RenderSurface::Admin )` | `RenderedTopic` | Renders a topic with its attribution |
 | `mcp()` | `McpClient` | The MCP client (check `isEnabled()` first) |
+| `agentReadinessExperimentalEnabled()` | `bool` | Whether checks for experimental Agent Readiness topics should run (`artisanpack.specification.agent_readiness_experimental`) |
 
 ## CheckRegistry
 

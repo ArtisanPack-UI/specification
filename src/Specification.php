@@ -230,6 +230,23 @@ class Specification
     }
 
     /**
+     * Determines whether checks for experimental Agent Readiness topics are enabled.
+     *
+     * Emerging Agent Readiness topics (WebMCP, DNS-AID, ai-catalog, etc.) are
+     * still moving upstream. Owner packages call this before registering or
+     * running checks for them; it reads the
+     * `artisanpack.specification.agent_readiness_experimental` config value.
+     *
+     * @since 1.0.0
+     *
+     * @return bool
+     */
+    public function agentReadinessExperimentalEnabled(): bool
+    {
+        return true === (bool) config( 'artisanpack.specification.agent_readiness_experimental', false );
+    }
+
+    /**
      * Rebuilds the local index from the topic rows when it is stale.
      *
      * @since 1.0.0

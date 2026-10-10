@@ -86,7 +86,13 @@ The MCP client is disabled by default, and the package then runs snapshot-only. 
 'agent_readiness_experimental' => (bool) env( 'SPECIFICATION_AGENT_READINESS_EXPERIMENTAL', false ),
 ```
 
-Upstream Agent Readiness topics such as WebMCP, DNS-AID, and `ai-catalog` are still changing. Owner packages should keep their checks for these topics off unless this flag is on.
+Upstream Agent Readiness topics such as WebMCP, DNS-AID, and `ai-catalog` are still changing. Owner packages should keep their checks for these topics off unless this flag is on, and should check it through `specification()->agentReadinessExperimentalEnabled()` rather than reading the config directly:
+
+```php
+if ( specification()->agentReadinessExperimentalEnabled() ) {
+    $registry->register( WebMcpCheck::class );
+}
+```
 
 ## Environment Variables
 

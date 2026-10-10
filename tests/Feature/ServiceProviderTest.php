@@ -92,3 +92,11 @@ it( 'publishes the config file under the specification-config tag', function ():
         ->and( array_key_first( $paths ) )->toBeFile()
         ->and( reset( $paths ) )->toBe( config_path( 'artisanpack/specification.php' ) );
 } );
+
+it( 'keeps experimental agent readiness checks off unless enabled', function (): void {
+    expect( specification()->agentReadinessExperimentalEnabled() )->toBeFalse();
+
+    config()->set( 'artisanpack.specification.agent_readiness_experimental', true );
+
+    expect( specification()->agentReadinessExperimentalEnabled() )->toBeTrue();
+} );

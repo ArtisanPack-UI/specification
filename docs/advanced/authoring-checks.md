@@ -188,5 +188,5 @@ Each owner package should list the slugs it covers in its README:
 - [ ] Missing inputs return `skipped`, not `failed`
 - [ ] Messages are translatable; `details` are structured
 - [ ] `autofix()` has no side effects and returns `null` when it cannot apply the fix
-- [ ] Agent Readiness checks for experimental topics respect `artisanpack.specification.agent_readiness_experimental`
+- [ ] Agent Readiness checks for experimental topics only register or run when `specification()->agentReadinessExperimentalEnabled()` is `true`
 - [ ] Tests cover pass, fail, skip, and autofix paths (see [Testing SpecChecks](Advanced-Testing-Checks))

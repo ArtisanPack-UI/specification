@@ -120,6 +120,8 @@ return [
     |
     | Emerging Agent Readiness topics (WebMCP, DNS-AID, ai-catalog, etc.) are
     | still moving targets upstream and stay off unless explicitly enabled.
+    | Owner packages read this through
+    | specification()->agentReadinessExperimentalEnabled().
     |
     */
 
