@@ -335,3 +335,11 @@ it( 'tolerates a JSON-RPC error whose message is not a string', function (): voi
 
     mcpClient()->listTopics();
 } )->throws( McpRequestException::class, 'Unknown error' );
+
+it( 'sends the UTC day for a date-time since value', function (): void {
+    fakeMcpTools( [ 'get_changes' => [ 'changes' => [] ] ] );
+
+    mcpClient()->getChanges( Carbon\CarbonImmutable::parse( '2026-09-01 23:30:00', 'America/Chicago' ) );
+
+    Http::assertSent( fn ( Request $request ): bool => '2026-09-02' === ( (array) $request->data()['params']['arguments'] )['since'] );
+} );

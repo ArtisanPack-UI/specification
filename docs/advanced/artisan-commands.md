@@ -39,7 +39,7 @@ php artisan keystone:spec-diff --since=2026-09-01
 The output has two parts:
 
 1. **Snapshot diff.** The slugs that the sync producing the current snapshot added, updated, and removed.
-2. **Upstream changes.** Only when the [MCP client](Usage-Mcp-Client) is enabled: the `get_changes` entries since the last sync (or `--since`). These are changes not yet in your local snapshot. Run `keystone:spec-sync` to pull them.
+2. **Upstream changes.** Only when the [MCP client](Usage-Mcp-Client) is enabled: the `get_changes` entries since the last sync (or `--since`). These are changes not yet in your local snapshot. Run `keystone:spec-sync` to pull them. Upstream change dates are UTC days. The last sync time is converted to its UTC day, and that whole day is included, so changes from earlier on the sync day can appear even though they're already synced. `--since` is sent exactly as typed.
 
 Topics enforced by a registered check are marked `(checked)`, and the command summarises how many upstream changes affect registered checks.
 

@@ -77,7 +77,8 @@ interface McpClient
      *
      * @since 1.0.0
      *
-     * @param  DateTimeInterface|string|null  $since  Only changes on or after this day.
+     * @param  DateTimeInterface|string|null  $since  Only changes on or after this day. A date-time is converted
+     *                                                to its UTC day; a string is sent as-is (YYYY-MM-DD).
      * @param  ChangeType|null                $type   Limit to one kind of change.
      * @param  int|null                       $limit  Maximum entries (1–100).
      *

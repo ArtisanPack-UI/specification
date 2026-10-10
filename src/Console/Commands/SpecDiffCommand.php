@@ -78,7 +78,8 @@ class SpecDiffCommand extends Command
             }
 
             // Reject dates PHP silently rolls over, such as 2026-13-45.
-            $since = $parsed instanceof CarbonImmutable && $parsed->format( 'Y-m-d' ) === $since ? $parsed : false;
+            // Sent as the calendar day typed, not converted through the app timezone.
+            $since = $parsed instanceof CarbonImmutable && $parsed->format( 'Y-m-d' ) === $since ? $since : false;
 
             if ( false === $since ) {
                 $this->components->error( __( 'The --since option must be a date in YYYY-MM-DD format.' ) );

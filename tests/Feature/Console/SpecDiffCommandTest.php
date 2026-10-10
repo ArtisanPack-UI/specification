@@ -158,3 +158,19 @@ it( 'neutralizes terminal escapes and style tags in upstream text', function ():
         ->doesntExpectOutputToContain( "\x07" )
         ->assertSuccessful();
 } );
+
+it( 'sends --since as the typed day whatever the app timezone', function (): void {
+    config()->set( 'app.timezone', 'Asia/Tokyo' );
+    date_default_timezone_set( 'Asia/Tokyo' );
+
+    $mcp = new FakeMcpClient();
+    app()->instance( McpClient::class, $mcp );
+
+    try {
+        $this->artisan( 'keystone:spec-diff', [ '--since' => '2026-09-15' ] )->assertSuccessful();
+    } finally {
+        date_default_timezone_set( 'UTC' );
+    }
+
+    expect( $mcp->calls[0][1]['since'] )->toBe( '2026-09-15' );
+} );

@@ -123,8 +123,9 @@ final class HttpMcpClient implements McpClient
      */
     public function getChanges( DateTimeInterface|string|null $since = null, ?ChangeType $type = null, ?int $limit = null ): McpChangeSet
     {
+        // Upstream change dates are UTC days.
         if ( $since instanceof DateTimeInterface ) {
-            $since = CarbonImmutable::instance( $since )->toDateString();
+            $since = CarbonImmutable::instance( $since )->utc()->toDateString();
         }
 
         return McpChangeSet::fromArray( $this->call( 'get_changes', array_filter( [
