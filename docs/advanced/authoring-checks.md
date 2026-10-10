@@ -82,7 +82,7 @@ Messages are for people, so translate them. `details` is for UIs and agents, so 
 
 A check knows *what* to change but rarely *where* it lives. The reference check asks the caller to pass a writer in the context data, and returns `null` without one. Reusing `run()` keeps the "is it already passing?" logic in one place.
 
-This simplified version handles only a missing doctype. The real `DoctypeCheck` also replaces legacy doctypes and moves misplaced ones.
+This simplified version handles only a missing doctype. The real `DoctypeCheck` also replaces legacy doctypes and moves misplaced ones, and it ignores doctype-like text inside comments and `script`, `style`, `textarea`, and `title` elements so its autofix never rewrites page code or content.
 
 ```php
     public const HTML_WRITER = 'html_writer';

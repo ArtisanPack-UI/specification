@@ -30,7 +30,10 @@ use ArtisanPackUI\Specification\Enums\SpecStatus;
  *
  * Following the HTML syntax rules, a byte order mark, whitespace, and
  * comments may precede the doctype; `<!doctype html>` and the
- * `about:legacy-compat` form both pass, matched case-insensitively.
+ * `about:legacy-compat` form both pass, matched case-insensitively. A doctype
+ * token later in the document is reported as misplaced; doctype-like text
+ * inside a comment or a script, style, textarea, or title element is not a
+ * doctype token, so it is ignored and the autofix never changes it.
  *
  * The check is not registered by default. Enable it by adding the class to
  * the `artisanpack.specification.checks` config array.
@@ -186,8 +189,13 @@ final class DoctypeCheck implements SpecCheck
             return [ 'state' => $valid ? 'valid' : 'legacy', 'found' => $match[0], 'offset' => $prefix, 'prefix' => $prefix ];
         }
 
-        if ( 1 === preg_match( '/<!doctype\b[^>]*>/i', $html, $match, PREG_OFFSET_CAPTURE ) ) {
-            return [ 'state' => 'misplaced', 'found' => $match[0][0], 'offset' => $match[0][1], 'prefix' => $prefix ];
+        // Doctype-like text inside a comment or a raw-text element (script,
+        // style, textarea, title) is not a doctype token, so it is ignored
+        // here and the autofix never touches it.
+        $searchable = $this->blankNonMarkup( $html );
+
+        if ( 1 === preg_match( '/<!doctype\b[^>]*>/i', $searchable, $match, PREG_OFFSET_CAPTURE ) ) {
+            return [ 'state' => 'misplaced', 'found' => substr( $html, $match[0][1], strlen( $match[0][0] ) ), 'offset' => $match[0][1], 'prefix' => $prefix ];
         }
 
         return [ 'state' => 'missing', 'found' => null, 'offset' => null, 'prefix' => $prefix ];
@@ -224,6 +232,28 @@ final class DoctypeCheck implements SpecCheck
         }
 
         return $position;
+    }
+
+    /**
+     * Blanks comments and raw-text element contents with spaces.
+     *
+     * The result has the same length as the input, so offsets found in it
+     * line up with the original HTML. Unterminated comments and elements are
+     * left as-is.
+     *
+     * @since 1.0.0
+     *
+     * @param  string  $html  The page HTML.
+     *
+     * @return string
+     */
+    private function blankNonMarkup( string $html ): string
+    {
+        return (string) preg_replace_callback(
+            '/<!--.*?-->|<(script|style|textarea|title|xmp)\b[^>]*>.*?<\/\1\s*>/is',
+            static fn ( array $match ): string => str_repeat( ' ', strlen( $match[0] ) ),
+            $html,
+        );
     }
 
     /**
