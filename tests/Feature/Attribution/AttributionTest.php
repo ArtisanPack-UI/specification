@@ -175,3 +175,16 @@ it( 'honours the configured heading offset', function ( int $offset, string $exp
     'two'     => [ 2, '<h3>The HTML doctype</h3>' ],
     'clamped' => [ 9, '<h6>The HTML doctype</h6>' ],
 ] );
+
+it( 'lets translators localize the attribution quote marks', function (): void {
+    $path = sys_get_temp_dir() . '/spec-lang-' . bin2hex( random_bytes( 4 ) );
+    mkdir( $path );
+    file_put_contents( $path . '/fr.json', (string) json_encode( [ '“:title” from :source, licensed under :license.' => '«:title» de :source, sous licence :license.' ] ) );
+    app( 'translation.loader' )->addJsonPath( $path );
+    app()->setLocale( 'fr' );
+
+    $attribution = new Attribution( 'Le doctype', 'https://specification.website/spec/foundations/doctype/' );
+
+    expect( $attribution->toHtml() )->toContain( '«<a href="https://specification.website/spec/foundations/doctype/">Le doctype</a>» de ' )
+        ->and( $attribution->toMarkdown() )->toStartWith( '«[Le doctype](<https://specification.website/spec/foundations/doctype/>)» de ' );
+} );

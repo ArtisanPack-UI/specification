@@ -186,8 +186,8 @@ final class Attribution implements Arrayable
      */
     public function toHtml(): string
     {
-        $sentence = __( ':title from :source, licensed under :license.', [
-            'title'   => '“' . $this->link( $this->url, $this->title ) . '”',
+        $sentence = __( '“:title” from :source, licensed under :license.', [
+            'title'   => $this->link( $this->url, $this->title ),
             'source'  => $this->link( self::SOURCE_URL, self::SOURCE_NAME ),
             'license' => $this->link( self::LICENSE_URL, self::LICENSE_NAME, 'license' ),
         ] );
@@ -204,8 +204,8 @@ final class Attribution implements Arrayable
      */
     public function toMarkdown(): string
     {
-        return __( ':title from :source, licensed under :license.', [
-            'title'   => '“' . $this->markdownLink( $this->url, $this->title ) . '”',
+        return __( '“:title” from :source, licensed under :license.', [
+            'title'   => $this->markdownLink( $this->url, $this->title ),
             'source'  => '[' . self::SOURCE_NAME . '](<' . self::SOURCE_URL . '>)',
             'license' => '[' . self::LICENSE_NAME . '](<' . self::LICENSE_URL . '>)',
         ] );
