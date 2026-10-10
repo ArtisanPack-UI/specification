@@ -22,6 +22,7 @@ use ArtisanPackUI\Specification\Checks\CheckRegistry;
 use ArtisanPackUI\Specification\Checks\CheckRunner;
 use ArtisanPackUI\Specification\Checks\SpecContext;
 use ArtisanPackUI\Specification\Checks\SpecResult;
+use ArtisanPackUI\Specification\Contracts\McpClient;
 use ArtisanPackUI\Specification\Contracts\SearchIndex;
 use ArtisanPackUI\Specification\Contracts\SpecCheck;
 use ArtisanPackUI\Specification\Enums\RenderSurface;
@@ -35,8 +36,8 @@ use ArtisanPackUI\Specification\Search\SearchHit;
 /**
  * Entry point for the package.
  *
- * Exposes sync, search, the check registry and runner, reporting, and the
- * attributed topic renderer.
+ * Exposes sync, search, the check registry and runner, reporting, the
+ * attributed topic renderer, and the optional MCP client.
  *
  * @package    ArtisanPack_UI
  * @subpackage Specification
@@ -55,6 +56,7 @@ class Specification
      * @param  CheckRegistry      $registry      The check registry.
      * @param  CheckRunner        $runner        The check runner.
      * @param  SpecTopicRenderer  $renderer      The topic renderer.
+     * @param  McpClient          $mcp           The MCP client.
      */
     public function __construct(
         private readonly Synchronizer $synchronizer,
@@ -62,6 +64,7 @@ class Specification
         private readonly CheckRegistry $registry,
         private readonly CheckRunner $runner,
         private readonly SpecTopicRenderer $renderer,
+        private readonly McpClient $mcp,
     ) {
     }
 
@@ -182,5 +185,20 @@ class Specification
     public function render( Topic $topic, RenderSurface $surface = RenderSurface::Admin ): RenderedTopic
     {
         return $this->renderer->render( $topic, $surface );
+    }
+
+    /**
+     * Gets the specification.website MCP client.
+     *
+     * The client is disabled unless `artisanpack.specification.mcp.enabled`
+     * is true; check isEnabled() before calling it.
+     *
+     * @since 1.0.0
+     *
+     * @return McpClient
+     */
+    public function mcp(): McpClient
+    {
+        return $this->mcp;
     }
 }
