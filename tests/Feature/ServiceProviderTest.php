@@ -34,6 +34,7 @@ it( 'merges the package config under the artisanpack.specification key', functio
         ->and( config( 'artisanpack.specification.checks' ) )->toBe( [] )
         ->and( config( 'artisanpack.specification.mcp.enabled' ) )->toBeFalse()
         ->and( config( 'artisanpack.specification.mcp.url' ) )->toBe( 'https://mcp.specification.website/mcp' )
+        ->and( config( 'artisanpack.specification.mcp.timeout' ) )->toBe( 10 )
         ->and( config( 'artisanpack.specification.agent_readiness_experimental' ) )->toBeFalse();
 } );
 
@@ -75,7 +76,12 @@ it( 'registers the weekly sync with the scheduler', function (): void {
 
 it( 'creates the topics and snapshots tables', function (): void {
     expect( Schema::hasTable( 'specification_topics' ) )->toBeTrue()
-        ->and( Schema::hasTable( 'specification_snapshots' ) )->toBeTrue();
+        ->and( Schema::hasTable( 'specification_snapshots' ) )->toBeTrue()
+        ->and( Schema::hasColumn( 'specification_snapshots', 'changes' ) )->toBeTrue();
+} );
+
+it( 'registers the keystone artisan commands', function (): void {
+    expect( array_keys( Illuminate\Support\Facades\Artisan::all() ) )->toContain( 'keystone:spec-sync', 'keystone:spec-diff', 'keystone:spec-check' );
 } );
 
 it( 'publishes the config file under the specification-config tag', function (): void {

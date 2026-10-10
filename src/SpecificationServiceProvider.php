@@ -22,7 +22,12 @@ use ArtisanPackUI\Specification\Attribution\LicenseGuard;
 use ArtisanPackUI\Specification\Attribution\SpecTopicRenderer;
 use ArtisanPackUI\Specification\Checks\CheckRegistry;
 use ArtisanPackUI\Specification\Checks\CheckRunner;
+use ArtisanPackUI\Specification\Console\Commands\SpecCheckCommand;
+use ArtisanPackUI\Specification\Console\Commands\SpecDiffCommand;
+use ArtisanPackUI\Specification\Console\Commands\SpecSyncCommand;
+use ArtisanPackUI\Specification\Contracts\McpClient;
 use ArtisanPackUI\Specification\Contracts\SearchIndex;
+use ArtisanPackUI\Specification\Mcp\HttpMcpClient;
 use ArtisanPackUI\Specification\Okf\OkfBundleLoader;
 use ArtisanPackUI\Specification\Okf\OkfDownloader;
 use ArtisanPackUI\Specification\Okf\SnapshotStore;
@@ -104,6 +109,13 @@ class SpecificationServiceProvider extends ServiceProvider
 
         $this->app->singleton( Synchronizer::class );
 
+        $this->app->singleton( McpClient::class, fn ( Application $app ): McpClient => new HttpMcpClient(
+            $app->make( HttpFactory::class ),
+            (bool) $this->config( 'mcp.enabled', false ),
+            (string) $this->config( 'mcp.url' ),
+            (int) $this->config( 'mcp.timeout', 10 ),
+        ) );
+
         $this->app->singleton( 'specification', fn ( Application $app ): Specification => $app->make( Specification::class ) );
         $this->app->singleton( Specification::class );
     }
@@ -111,8 +123,8 @@ class SpecificationServiceProvider extends ServiceProvider
     /**
      * Bootstraps any application services.
      *
-     * Loads migrations, registers configured checks and the scheduled sync,
-     * and registers publishable config and migrations.
+     * Loads migrations, registers configured checks, the scheduled sync, and
+     * the Artisan commands, and registers publishable config and migrations.
      *
      * @since 1.0.0
      *
@@ -133,6 +145,14 @@ class SpecificationServiceProvider extends ServiceProvider
                     ->cron( (string) $this->config( 'sync.cron', '0 3 * * 0' ) )
                     ->withoutOverlapping();
             } );
+        }
+
+        if ( $this->app->runningInConsole() ) {
+            $this->commands( [
+                SpecSyncCommand::class,
+                SpecDiffCommand::class,
+                SpecCheckCommand::class,
+            ] );
         }
 
         $this->publishes( [

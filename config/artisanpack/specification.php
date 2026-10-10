@@ -73,6 +73,9 @@ return [
     | their own service providers via the CheckRegistry, or by tagging them
     | with `artisanpack.specification.checks`.
     |
+    | The in-package reference check is opt-in; enable it with
+    | \ArtisanPackUI\Specification\Checks\Foundations\DoctypeCheck::class.
+    |
     */
 
     'checks' => [],
@@ -98,14 +101,16 @@ return [
     | MCP Client
     |--------------------------------------------------------------------------
     |
-    | Optional secondary source for freshness. Disabled by default, in which
-    | case the package runs snapshot-only.
+    | Optional secondary source for freshness (`keystone:spec-diff` uses its
+    | `get_changes` tool). Disabled by default, in which case the package runs
+    | snapshot-only and the OKF snapshot stays authoritative.
     |
     */
 
     'mcp' => [
         'enabled' => (bool) env( 'SPECIFICATION_MCP_ENABLED', false ),
         'url'     => env( 'SPECIFICATION_MCP_URL', 'https://mcp.specification.website/mcp' ),
+        'timeout' => (int) env( 'SPECIFICATION_MCP_TIMEOUT', 10 ),
     ],
 
     /*

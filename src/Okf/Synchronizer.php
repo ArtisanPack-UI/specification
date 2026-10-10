@@ -205,11 +205,19 @@ final class Synchronizer
             Topic::query()->whereIn( 'slug', $deleted )->delete();
         }
 
-        Snapshot::query()->updateOrCreate( [ 'version' => $bundle->version ], [
+        $snapshot = Snapshot::query()->firstOrNew( [ 'version' => $bundle->version ] );
+        $changes  = [ 'created' => $created, 'updated' => $updated, 'deleted' => $deleted ];
+
+        // A forced re-apply that changed nothing keeps the diff recorded when the snapshot first landed.
+        if ( ! $snapshot->exists || [] !== array_merge( $created, $updated, $deleted ) ) {
+            $snapshot->changes = $changes;
+        }
+
+        $snapshot->fill( [
             'okf_version' => $bundle->okfVersion,
             'topic_count' => count( $bundle->topics ),
             'synced_at'   => now(),
-        ] );
+        ] )->save();
 
         return new SyncResult( $bundle->version, true, $created, $updated, $deleted, $unchanged, $bundle->errors );
     }
