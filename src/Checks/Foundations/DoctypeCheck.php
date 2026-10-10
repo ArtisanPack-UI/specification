@@ -107,6 +107,9 @@ final class DoctypeCheck implements SpecCheck
         $inspection = $this->inspect( $context->html );
 
         return match ( $inspection['state'] ) {
+            'error'      => SpecResult::errored( $this, $context, __( 'The page HTML could not be inspected (the pattern engine failed: :error).', [
+                'error' => preg_last_error_msg(),
+            ] ) ),
             'valid'      => SpecResult::passed( $this, $context, __( 'The page starts with the HTML doctype.' ), [
                 'found' => $inspection['found'],
             ] ),
@@ -130,7 +133,8 @@ final class DoctypeCheck implements SpecCheck
      *
      * Returns a fix only when the page fails and the context carries an
      * HTML_WRITER callable; the fix's details include the corrected HTML so
-     * a UI or agent can preview the change before applying it.
+     * a UI or agent can preview the change before applying it. No fix is
+     * offered when the HTML could not be inspected.
      *
      * @since 1.0.0
      */
@@ -144,7 +148,7 @@ final class DoctypeCheck implements SpecCheck
 
         $inspection = $this->inspect( $context->html );
 
-        if ( 'valid' === $inspection['state'] ) {
+        if ( 'valid' === $inspection['state'] || 'error' === $inspection['state'] ) {
             return null;
         }
 
@@ -174,7 +178,8 @@ final class DoctypeCheck implements SpecCheck
      * @param  string  $html  The page HTML.
      *
      * @return array{state: string, found: string|null, offset: int|null, prefix: int}
-     *               `state` is one of valid, legacy, misplaced, or missing;
+     *               `state` is one of valid, legacy, misplaced, missing, or
+     *               error (the HTML could not be scanned);
      *               `prefix` is the length of the allowed preamble (BOM,
      *               whitespace, comments) before the first real token.
      */
@@ -193,6 +198,10 @@ final class DoctypeCheck implements SpecCheck
         // style, textarea, title) is not a doctype token, so it is ignored
         // here and the autofix never touches it.
         $searchable = $this->blankNonMarkup( $html );
+
+        if ( null === $searchable ) {
+            return [ 'state' => 'error', 'found' => null, 'offset' => null, 'prefix' => $prefix ];
+        }
 
         if ( 1 === preg_match( '/<!doctype\b[^>]*>/i', $searchable, $match, PREG_OFFSET_CAPTURE ) ) {
             return [ 'state' => 'misplaced', 'found' => substr( $html, $match[0][1], strlen( $match[0][0] ) ), 'offset' => $match[0][1], 'prefix' => $prefix ];
@@ -245,11 +254,11 @@ final class DoctypeCheck implements SpecCheck
      *
      * @param  string  $html  The page HTML.
      *
-     * @return string
+     * @return string|null Null when the pattern engine fails (e.g. a backtrack limit on very large HTML).
      */
-    private function blankNonMarkup( string $html ): string
+    private function blankNonMarkup( string $html ): ?string
     {
-        return (string) preg_replace_callback(
+        return preg_replace_callback(
             '/<!--.*?-->|<(script|style|textarea|title|xmp)\b[^>]*>.*?<\/\1\s*>/is',
             static fn ( array $match ): string => str_repeat( ' ', strlen( $match[0] ) ),
             $html,
