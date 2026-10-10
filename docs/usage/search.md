@@ -34,4 +34,4 @@ Topic::query()->inCategory( 'security' )->withStatus( SpecStatus::Avoid )->get()
 
 If the index file cannot be opened or SQLite lacks FTS5, search throws `SearchIndexUnavailableException`.
 
-The index is a local file, while topics live in your database. If the index doesn't match the current snapshot (for example on a server that didn't run the sync), `search()` rebuilds it from the topic rows first. See [Multi-server Deployments](Troubleshooting#multi-server-deployments).
+The index is a local file, while topics live in your database. If the index doesn't match the current snapshot (for example on a server that didn't run the sync), `search()` rebuilds it from the topic rows first. If another request is already rebuilding it, `search()` waits up to 10 seconds and then throws `SearchIndexUnavailableException`. See [Deployment & Operations](Advanced-Deployment#multiple-servers-and-ephemeral-filesystems).

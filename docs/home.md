@@ -33,6 +33,7 @@ The package owns OKF ingestion, the local search index, the `SpecCheck` contract
   - [Testing SpecChecks](Advanced-Testing-Checks)
   - [Attribution Requirements](Advanced-Attribution-Requirements)
   - [Artisan Commands](Advanced-Artisan-Commands)
+  - [Deployment & Operations](Advanced-Deployment)
 
 - **API Reference**
   - [API Overview](Api)
@@ -47,10 +48,10 @@ The package owns OKF ingestion, the local search index, the `SpecCheck` contract
 ## Features
 
 - **OKF ingestion**: Weekly, idempotent sync of `https://specification.website/okf.tar.gz` into an on-disk snapshot, a `specification_topics` table, and a search index. Archives are size-capped and validated.
-- **Local search**: An embedded SQLite FTS5 index keeps topic lookups fast and working offline.
+- **Local search**: An embedded SQLite FTS5 index keeps topic lookups fast and working offline. It rebuilds itself from the database on servers that didn't run the sync.
 - **SpecCheck registry**: A single contract (`SpecCheck`) that owner packages implement and register, with discovery from service providers, config, and container tags.
 - **Result aggregation**: `SpecReport` scores the four tiers (Required, Recommended, Optional, Avoid) separately for the site, each category, and each page. It never produces a single "overall %".
-- **CC BY 4.0 attribution**: `SpecTopicRenderer` is the supported way to output topic text. It always attaches attribution and refuses blocked surfaces.
+- **CC BY 4.0 attribution**: `SpecTopicRenderer` is the supported way to output topic text. It always attaches attribution, refuses blocked surfaces, and makes the topic's relative links absolute.
 - **MCP client**: An optional client for the specification.website MCP server, used to check upstream freshness. It is off by default, so the package runs snapshot-only.
 - **Artisan commands**: `keystone:spec-sync`, `keystone:spec-diff`, and `keystone:spec-check`.
 

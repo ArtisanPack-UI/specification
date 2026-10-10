@@ -45,7 +45,7 @@ The scheduled event is named `artisanpack-specification-sync` and runs `withoutO
 ],
 ```
 
-The SQLite FTS5 index file. Relative paths resolve against `storage_path()`. `:memory:` is accepted, which is useful in tests.
+The SQLite FTS5 index file. Relative paths resolve against `storage_path()`. `:memory:` is accepted, which is useful in tests. Keep it on local disk: the index uses WAL mode, which isn't safe on network filesystems. See [Deployment & Operations](Advanced-Deployment).
 
 ## SpecCheck Registrations
 
@@ -114,6 +114,7 @@ if ( specification()->agentReadinessExperimentalEnabled() ) {
 | `SPECIFICATION_SYNC_SCHEDULED` | `true` |
 | `SPECIFICATION_SYNC_CRON` | `0 3 * * 0` |
 | `SPECIFICATION_INDEX_PATH` | `artisanpack/specification/index.sqlite` |
+| `SPECIFICATION_RENDER_HEADING_OFFSET` | `1` |
 | `SPECIFICATION_MCP_ENABLED` | `false` |
 | `SPECIFICATION_MCP_URL` | `https://mcp.specification.website/mcp` |
 | `SPECIFICATION_MCP_TIMEOUT` | `10` |

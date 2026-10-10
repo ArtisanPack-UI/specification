@@ -36,11 +36,13 @@ The SQLite index file could not be opened, your SQLite build lacks FTS5, or (wit
 
 `search()` rebuilds a stale or empty index from the topic rows before it searches, so this usually fixes itself on the next search. If it doesn't, check that the database has topics (`Topic::query()->count()`) and run `php artisan keystone:spec-sync`. Re-running it rebuilds a stale index even when the archive hasn't changed.
 
-## Multi-server Deployments
+### Search fails with "being rebuilt by another process"
 
-Topic and snapshot rows live in your shared database, but the search index and the vendored snapshot are files under `storage_path()` on each server. The scheduled sync runs on one server only. On every other server (and after a deploy to a fresh or ephemeral filesystem) the first `search()` call finds that the local index doesn't match the current snapshot and rebuilds it from the database, under a short cache lock so concurrent requests don't all rebuild at once. A request that finds another rebuild in progress waits up to 10 seconds (`Specification::INDEX_LOCK_WAIT_SECONDS`). It never searches an index it hasn't confirmed is current, so if the wait runs out it throws `SearchIndexUnavailableException` ("The search index is being rebuilt by another process"). The cache lock only coordinates requests that share a cache store.
+Another request held the index rebuild lock for more than 10 seconds. It's transient, so retry the search. See [Deployment & Operations](Advanced-Deployment#multiple-servers-and-ephemeral-filesystems).
 
-Keep `artisanpack.specification.index.path` (`SPECIFICATION_INDEX_PATH`) on each server's local disk. The index uses SQLite's WAL mode, so searches keep reading while a rebuild writes, and WAL isn't safe on network filesystems such as NFS or EFS. The on-disk snapshot is only an offline copy of the archive. Nothing reads it at request time, so it doesn't need to be shared either.
+### Search is empty on some servers only
+
+The index is a file on each server. `search()` rebuilds a stale one from the database, so this fixes itself unless the index path is on a network filesystem. Keep it on local disk. See [Deployment & Operations](Advanced-Deployment#multiple-servers-and-ephemeral-filesystems).
 
 ## Checks
 

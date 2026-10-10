@@ -17,6 +17,7 @@
 - Optional `HttpMcpClient` for the specification.website MCP server (`list_topics`, `get_topic`, `get_changes`, `search`), disabled by default.
 - `specification()->agentReadinessExperimentalEnabled()` for owner packages gating experimental Agent Readiness checks.
 - Artisan commands `keystone:spec-sync`, `keystone:spec-diff`, and `keystone:spec-check`.
+- Documentation in `docs/`, including a Deployment & Operations guide for multi-server, ephemeral-filesystem, and offline setups.
 - Package scaffold from `package-blueprint`: service provider, facade, `specification()` helper, publishable `artisanpack.specification` config and migrations, `artisanpack-ui/code-style` linting, GitHub Actions CI, and the tag-driven release workflow.
 
 ### Security
@@ -32,3 +33,6 @@
 - MCP list and change limits are clamped to the documented ranges, and a non-string JSON-RPC error message no longer raises an `ErrorException`.
 - `keystone:spec-diff` sends UTC days to the MCP server and passes `--since` through as typed. `keystone:spec-check` warns when the URL returns an error status.
 - Attribution quote marks are now part of the translatable strings.
+- Resolved topic links are percent-encoded so they're always valid in a Markdown destination or an HTML attribute. The Markdown rewrite also handles destinations that contain `<` or `>`.
+- `DoctypeCheck` returns an errored result with no autofix when its HTML scan fails (for example a PCRE backtrack limit on very large pages), instead of reporting a missing doctype.
+- `search()` waits up to 10 seconds for an index rebuild running elsewhere and throws `SearchIndexUnavailableException` if it's still locked, instead of searching an index it hasn't confirmed is current.

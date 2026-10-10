@@ -42,9 +42,9 @@ All value objects are immutable.
 
 ## Attribution
 
-- `Attribution`: `forTopic()`, `canonical()`, `toText()`, `toHtml()`, `toMarkdown()`, `toArray()`, and the static helpers `canonicalUrl()` (normalizes a URL to the upstream origin) and `isHttpUrl()`. The constants `SOURCE_NAME`, `SOURCE_URL`, `LICENSE_NAME`, `LICENSE_URL`, and `MAX_URL_LENGTH` hold the fixed parts.
-- `RenderedTopic`: `toHtml()`, `toMarkdown()`, `toArray()`, `jsonSerialize()`, `__toString()`.
-- `TopicLinkResolver`: `forTopic()`, `resolve()` (returns the absolute URL, or `null` when the link should be dropped), `rewriteMarkdown()`.
+- `Attribution`: public `title` and `url`; `forTopic()`, `canonical()`, `toText()`, `toHtml()`, `toMarkdown()`, `toArray()`, and the static helpers `canonicalUrl()` (normalizes a URL to the upstream origin) and `isHttpUrl()`. The constants `SOURCE_NAME`, `SOURCE_URL`, `LICENSE_NAME`, `LICENSE_URL`, and `MAX_URL_LENGTH` hold the fixed parts.
+- `RenderedTopic`: public `slug`, `attribution`, `placement`, and `surface`; `toHtml()`, `toMarkdown()`, `toArray()`, `jsonSerialize()`, `__toString()`. Links in both outputs are made absolute, and HTML headings are demoted by `render.heading_offset`.
+- `TopicLinkResolver`: `forTopic()`, `resolve()` (returns the absolute URL, or `null` when the link should be dropped), `rewriteMarkdown()`. Resolved URLs are percent-encoded so they're always safe in a Markdown destination or an HTML attribute.
 
 ## MCP
 

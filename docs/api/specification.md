@@ -9,7 +9,7 @@ title: Specification Class
 | Method | Returns | Description |
 |--------|---------|-------------|
 | `sync( bool $force = false, ?string $archivePath = null )` | `SyncResult` | Syncs the OKF snapshot, topics table, and search index |
-| `search( string $query, int $limit = 10, ?string $category = null, ?SpecStatus $status = null )` | `array<SearchHit>` | Searches the local index |
+| `search( string $query, int $limit = 10, ?string $category = null, ?SpecStatus $status = null )` | `array<SearchHit>` | Searches the local index, rebuilding it from the topic rows first if it's stale |
 | `topic( string $slug )` | `?Topic` | Finds a topic by slug |
 | `checks()` | `CheckRegistry` | The check registry |
 | `registerCheck( SpecCheck\|string $check )` | `static` | Registers a check instance or class name |
@@ -18,6 +18,11 @@ title: Specification Class
 | `render( Topic $topic, RenderSurface $surface = RenderSurface::Admin )` | `RenderedTopic` | Renders a topic with its attribution |
 | `mcp()` | `McpClient` | The MCP client (check `isEnabled()` first) |
 | `agentReadinessExperimentalEnabled()` | `bool` | Whether checks for experimental Agent Readiness topics should run (`artisanpack.specification.agent_readiness_experimental`) |
+
+| Constant | Value | Description |
+|----------|-------|-------------|
+| `INDEX_LOCK_NAME` | `artisanpack-specification-index-rebuild` | Cache lock held while a stale index is rebuilt |
+| `INDEX_LOCK_WAIT_SECONDS` | `10` | How long `search()` waits for another rebuild before throwing `SearchIndexUnavailableException` |
 
 ## CheckRegistry
 
@@ -33,6 +38,15 @@ title: Specification Class
 | `slugs()` | Unique, sorted covered slugs |
 
 `CheckRegistry::TAG` (`artisanpack.specification.checks`) is the container tag for check discovery, and `CheckRegistry::SLUG_PATTERN` is the slug validation pattern.
+
+## Other Constants
+
+| Constant | Description |
+|----------|-------------|
+| `SpecificationServiceProvider::SCHEDULE_NAME` | `artisanpack-specification-sync`, the scheduled sync's name |
+| `Synchronizer::LOCK_NAME` | `artisanpack-specification-sync`, the cache lock that prevents overlapping syncs |
+| `HttpMcpClient::MAX_RESPONSE_BYTES` | 5 MB, the largest MCP response accepted |
+| `DoctypeCheck::SLUG`, `DoctypeCheck::HTML_WRITER`, `DoctypeCheck::DOCTYPE` | The reference check's slug, autofix writer key, and inserted doctype |
 
 ## Helper
 

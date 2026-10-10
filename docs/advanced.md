@@ -31,3 +31,9 @@ What CC BY 4.0 requires of every consumer that displays specification text, and 
 `keystone:spec-sync`, `keystone:spec-diff`, and `keystone:spec-check`.
 
 [Learn more about Artisan Commands →](Advanced-Artisan-Commands)
+
+### Deployment & Operations
+
+Where the package keeps its data, the scheduled sync, multi-server and ephemeral-filesystem deployments, offline syncs, and monitoring.
+
+[Learn more about Deployment & Operations →](Advanced-Deployment)

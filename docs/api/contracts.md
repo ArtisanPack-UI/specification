@@ -35,9 +35,9 @@ See [Authoring SpecChecks](Advanced-Authoring-Checks).
 | Method | Returns | Description |
 |--------|---------|-------------|
 | `isEnabled()` | `bool` | Whether the client may make requests |
-| `listTopics( ?string $category = null, ?SpecStatus $status = null, ?int $limit = null )` | `array<McpTopic>` | `list_topics` |
+| `listTopics( ?string $category = null, ?SpecStatus $status = null, ?int $limit = null )` | `array<McpTopic>` | `list_topics` (limit clamped to 1–200; `null` for all) |
 | `getTopic( string $slug )` | `McpTopic` | `get_topic`; accepts local or upstream slugs |
-| `getChanges( DateTimeInterface\|string\|null $since = null, ?ChangeType $type = null, ?int $limit = null )` | `McpChangeSet` | `get_changes` |
+| `getChanges( DateTimeInterface\|string\|null $since = null, ?ChangeType $type = null, ?int $limit = null )` | `McpChangeSet` | `get_changes`. A date-time is sent as its UTC day, and a string (`YYYY-MM-DD`) is sent as-is. Limit clamped to 1–100 |
 | `search( string $query, int $limit = 5 )` | `array<McpTopic>` | `search` (limit clamped to 1–25) |
 
-Every method except `isEnabled()` throws `McpUnavailableException` when disabled and `McpRequestException` on failure. See [MCP Client](Usage-Mcp-Client).
+Topic URLs in results are normalized to the specification.website origin. Every method except `isEnabled()` throws `McpUnavailableException` when disabled and `McpRequestException` on failure. See [MCP Client](Usage-Mcp-Client).

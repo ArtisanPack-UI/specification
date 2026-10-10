@@ -32,6 +32,20 @@ Yes. An unchanged archive is a no-op, unchanged rows are never rewritten, and a 
 
 It is reported in the sync result's `errors`, and its previously synced row is kept.
 
+### Does search work when I run several servers?
+
+Yes. The index is a file on each server, and `search()` rebuilds a stale one from the shared database before searching. See [Deployment & Operations](Advanced-Deployment).
+
+## Rendering
+
+### Why do links in rendered topics point to specification.website?
+
+Topic bodies link relative to the upstream bundle and site, so those links would break on your domain. The renderer makes them absolute: references go to the cited source, and other topics go to specification.website. See [Rendering Topics](Usage-Rendering-Topics#links).
+
+### Why does a rendered topic start with an `<h2>`?
+
+Headings are demoted one level by default so a topic doesn't add a second `<h1>` to your page. Set `render.heading_offset` to `0` to keep the original levels.
+
 ## MCP
 
 ### Do I need the MCP client?

@@ -13,12 +13,12 @@ title: Models
 | `slug` | `string` | Unique `category/topic` slug |
 | `category` | `string` | Category |
 | `status` | `SpecStatus` | Status tier |
-| `conformance` | `?string` | RFC 2119 keyword (`MUST`, `SHOULD`, `MAY`, `MUST NOT`) |
+| `conformance` | `?string` | RFC 2119 keyword (`MUST`, `MUST NOT`, `SHOULD`, `SHOULD NOT`, `MAY`), upper-cased. `null` when upstream gives no known keyword |
 | `title` | `string` | Title |
 | `summary` | `string` | One-paragraph summary |
 | `body_md` | `string` | Markdown body. **Hidden from serialization**; output it with `render()` |
-| `sources_json` | `array` | Cited sources |
-| `resource_url` | `string` | Canonical specification.website URL |
+| `sources_json` | `array` | Cited sources: `id`, `title`, `resource` (http(s) only), `author`, `mirror` (the bundle's `references/` path) |
+| `resource_url` | `string` | Canonical specification.website URL (always on the upstream origin) |
 | `snapshot_version` | `string` | Version of the snapshot the row came from |
 | `attribution` | `string` | Canonical CC BY 4.0 attribution |
 | `source_updated_at` | `?Carbon` | When the topic was last updated upstream |

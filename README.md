@@ -89,7 +89,7 @@ Anywhere you display topic text, you must credit the topic title and The Website
 
 ## Documentation
 
-The full documentation is in [`docs/`](docs/home.md).
+The full documentation is in [`docs/`](docs/home.md). For production setups (multiple servers, ephemeral filesystems, offline syncs), see [Deployment & Operations](docs/advanced/deployment.md).
 
 ## Contributing
 

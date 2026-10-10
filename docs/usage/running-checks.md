@@ -72,7 +72,8 @@ See [Artisan Commands](Advanced-Artisan-Commands#keystonespec-check).
 ```php
 $registry = specification()->checks();
 
-$registry->all();                       // every registered check
+$registry->all();                       // every usable registered check
+$registry->invalid();                   // checks set aside, with the reason
 $registry->forSlug( 'foundations/doctype' );
 $registry->forCategory( 'security' );
 $registry->forScope( CheckScope::Page );

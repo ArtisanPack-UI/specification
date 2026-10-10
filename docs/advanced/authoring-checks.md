@@ -186,6 +186,7 @@ Each owner package should list the slugs it covers in its README:
 - [ ] `slug()` matches a real topic and `category/topic` format
 - [ ] `status()` matches the upstream tier
 - [ ] Missing inputs return `skipped`, not `failed`
+- [ ] Inputs the check can't evaluate (for example a regex failure on huge HTML) return `errored` with no autofix, not `failed`
 - [ ] Messages are translatable; `details` are structured
 - [ ] `autofix()` has no side effects and returns `null` when it cannot apply the fix
 - [ ] Agent Readiness checks for experimental topics only register or run when `specification()->agentReadinessExperimentalEnabled()` is `true`

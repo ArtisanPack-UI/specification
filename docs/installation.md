@@ -60,3 +60,4 @@ Set `SPECIFICATION_SYNC_SCHEDULED=false` to turn off the scheduled sync.
 - [Requirements](Installation-Requirements)
 - [Configuration](Installation-Configuration)
 - [Quick Start Guide](Getting-Started)
+- [Deployment & Operations](Advanced-Deployment): multi-server, offline, and scheduler setup
