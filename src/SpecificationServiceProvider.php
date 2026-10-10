@@ -37,7 +37,8 @@ class SpecificationServiceProvider extends ServiceProvider
     /**
      * Registers any application services.
      *
-     * Merges the package configuration and binds the Specification class
+     * Recursively merges the package configuration (so partial nested
+     * overrides keep the remaining defaults) and binds the Specification class
      * as a singleton in the container.
      *
      * @since 1.0.0
@@ -46,7 +47,7 @@ class SpecificationServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->mergeConfigFrom(
+        $this->replaceConfigRecursivelyFrom(
             __DIR__ . '/../config/artisanpack/specification.php',
             'artisanpack.specification',
         );

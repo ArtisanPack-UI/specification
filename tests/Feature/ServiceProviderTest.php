@@ -40,6 +40,18 @@ it( 'keeps application overrides when merging the package config', function (): 
     expect( config( 'artisanpack.specification.mcp.enabled' ) )->toBeTrue();
 } );
 
+it( 'keeps nested defaults when an application overrides a single nested key', function (): void {
+    config()->set( 'artisanpack.specification', [
+        'okf' => [ 'snapshot_path' => 'custom/snapshot' ],
+    ] );
+
+    ( new SpecificationServiceProvider( app() ) )->register();
+
+    expect( config( 'artisanpack.specification.okf.snapshot_path' ) )->toBe( 'custom/snapshot' )
+        ->and( config( 'artisanpack.specification.okf.url' ) )->toBe( 'https://specification.website/okf.tar.gz' )
+        ->and( config( 'artisanpack.specification.mcp.url' ) )->toBe( 'https://mcp.specification.website/mcp' );
+} );
+
 it( 'publishes the config file under the specification-config tag', function (): void {
     $paths = ServiceProvider::pathsToPublish( SpecificationServiceProvider::class, 'specification-config' );
 

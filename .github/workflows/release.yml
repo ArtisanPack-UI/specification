@@ -63,8 +63,9 @@ jobs:
         run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
       - name: Validate tag version matches composer.json
+        env:
+          TAG_VERSION: ${{ steps.version.outputs.version }}
         run: |
-          TAG_VERSION="${{ steps.version.outputs.version }}"
           COMPOSER_VERSION=$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' composer.json | head -n1)
           if [ -z "$COMPOSER_VERSION" ]; then
             echo "Unable to read composer.json version"
@@ -77,8 +78,9 @@ jobs:
 
       - name: Extract release notes from CHANGELOG
         id: changelog
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
-          VERSION=${{ steps.version.outputs.version }}
           echo "Extracting notes for version $VERSION"
 
           if [ ! -f "CHANGELOG.md" ]; then
