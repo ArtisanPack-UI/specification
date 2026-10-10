@@ -40,9 +40,9 @@ $result = specification()->sync( archivePath: storage_path( 'okf.tar.gz' ) );
 
 Sync is safe to run repeatedly:
 
-- An archive identical to the current snapshot is a no-op. The search index is still rebuilt if it is stale.
+- An archive identical to the current snapshot is a no-op. The on-disk snapshot and the search index are still rewritten if they are stale, for example after an earlier sync failed partway.
 - Topic rows are upserted by slug and only written when their content changes. Re-running never duplicates rows or touches `updated_at` on unchanged topics.
-- A topic that fails to parse is reported in `errors` and its previously synced row is kept rather than deleted.
+- A topic that fails to parse is reported in `errors` and its previously synced row is kept rather than deleted. A slug or title longer than 255 characters counts as a parse failure. An unknown `conformance` keyword is stored as `null`.
 - An invalid archive throws before anything is written, so the existing snapshot, rows, and index stay intact.
 - A cache lock stops scheduled and on-demand syncs from overlapping. A second sync while one is running throws `SyncFailedException`.
 
@@ -71,4 +71,6 @@ The snapshot is written to a temporary sibling directory and swapped into place,
 
 ## Failures
 
-`sync()` throws `SyncFailedException` when the archive cannot be downloaded (including a non-`https` URL or an oversized body), a local archive is missing, or another sync holds the lock. It throws `InvalidArchiveException` when the archive is malformed or contains no valid topics. Both extend `SpecificationException`.
+The database is updated first, in a single transaction. The on-disk snapshot and the search index are written after it.
+
+`sync()` throws `SyncFailedException` when the archive cannot be downloaded (including a non-`https` URL or an oversized body), a local archive is missing, another sync holds the lock, or the snapshot cannot be applied (for example a database error, which is wrapped with the original as `previous`). It throws `InvalidArchiveException` when the archive is malformed or contains no valid topics. Both extend `SpecificationException`.

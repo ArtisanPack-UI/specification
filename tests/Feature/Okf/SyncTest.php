@@ -215,3 +215,41 @@ it( 'wraps transport errors in a sync exception', function (): void {
 
     specification()->sync();
 } )->throws( SyncFailedException::class, 'timed out' );
+
+it( 'wraps database failures and leaves the snapshot on disk untouched', function (): void {
+    $archive = okfArchive();
+    specification()->sync( archivePath: writeOkfArchive( $archive ) );
+
+    Illuminate\Support\Facades\Schema::drop( 'specification_snapshots' );
+
+    $changed = okfArchive( [ 'okf/foundations/doctype.md' => str_replace( 'quirks mode', 'quirks rendering', okfFixtureFiles()['okf/foundations/doctype.md'] ) ] );
+
+    expect( fn () => specification()->sync( archivePath: writeOkfArchive( $changed ) ) )
+        ->toThrow( SyncFailedException::class, 'Could not apply the specification snapshot' );
+
+    expect( app( SnapshotStore::class )->manifest()['version'] )->toBe( hash( 'sha256', $archive ) )
+        ->and( Topic::query()->where( 'slug', 'foundations/doctype' )->value( 'body_md' ) )->toContain( 'quirks mode' );
+} );
+
+it( 'rewrites a stale on-disk snapshot even when the archive is unchanged', function (): void {
+    $path = writeOkfArchive( okfArchive() );
+    specification()->sync( archivePath: $path );
+
+    ( new Illuminate\Filesystem\Filesystem() )->deleteDirectory( app( SnapshotStore::class )->path() );
+
+    $result = specification()->sync( archivePath: $path );
+
+    expect( $result->changed )->toBeFalse()
+        ->and( app( SnapshotStore::class )->manifest()['version'] )->toBe( Snapshot::current()->version );
+} );
+
+it( 'records an oversized topic as a per-topic error', function (): void {
+    $long = okfFixtureFiles()['okf/foundations/doctype.md'];
+    $long = preg_replace( '/^title: .*$/m', 'title: "' . str_repeat( 'x', 300 ) . '"', $long );
+
+    $result = specification()->sync( archivePath: writeOkfArchive( okfArchive( [ 'okf/foundations/doctype.md' => $long ] ) ) );
+
+    expect( $result->errors )->toHaveKey( 'foundations/doctype' )
+        ->and( $result->errors['foundations/doctype'] )->toContain( 'longer than 255' )
+        ->and( Topic::query()->count() )->toBe( 2 );
+} );

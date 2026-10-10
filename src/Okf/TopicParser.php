@@ -43,6 +43,20 @@ final class TopicParser
     private const SOURCE_KEYS = [ 'id', 'title', 'resource', 'author', 'mirror' ];
 
     /**
+     * RFC 2119 keywords accepted as a topic's conformance.
+     *
+     * @var array<int, string>
+     */
+    private const CONFORMANCE_KEYWORDS = [ 'MUST', 'MUST NOT', 'SHOULD', 'SHOULD NOT', 'MAY' ];
+
+    /**
+     * Longest slug and title accepted (the `slug` and `title` column lengths).
+     *
+     * @var int
+     */
+    private const MAX_STRING_LENGTH = 255;
+
+    /**
      * Splits a document into its front matter and body.
      *
      * @since 1.0.0
@@ -116,14 +130,22 @@ final class TopicParser
             ] ) );
         }
 
-        $slug = $category . '/' . $topic;
+        $slug  = $category . '/' . $topic;
+        $title = trim( $meta['title'] );
+
+        if ( strlen( $slug ) > self::MAX_STRING_LENGTH || mb_strlen( $title ) > self::MAX_STRING_LENGTH ) {
+            throw new InvalidArchiveException( __( 'Topic [:slug] has a slug or title longer than :max characters.', [
+                'slug' => mb_substr( $slug, 0, 64 ),
+                'max'  => self::MAX_STRING_LENGTH,
+            ] ) );
+        }
 
         return new OkfTopic(
             $slug,
             $category,
             $status,
-            is_string( $meta['conformance'] ?? null ) ? $meta['conformance'] : null,
-            trim( $meta['title'] ),
+            $this->conformance( $meta['conformance'] ?? null ),
+            $title,
             trim( $meta['description'] ),
             $body,
             $this->sources( $meta['sources'] ?? [] ),
@@ -172,6 +194,26 @@ final class TopicParser
         }
 
         return $normalized;
+    }
+
+    /**
+     * Normalizes the RFC 2119 conformance keyword.
+     *
+     * @since 1.0.0
+     *
+     * @param  mixed  $value  The raw value.
+     *
+     * @return string|null Null when the value is not a known keyword.
+     */
+    private function conformance( mixed $value ): ?string
+    {
+        if ( ! is_string( $value ) ) {
+            return null;
+        }
+
+        $keyword = strtoupper( (string) preg_replace( '/\s+/', ' ', trim( $value ) ) );
+
+        return in_array( $keyword, self::CONFORMANCE_KEYWORDS, true ) ? $keyword : null;
     }
 
     /**
