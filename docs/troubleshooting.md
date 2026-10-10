@@ -40,7 +40,7 @@ Run `php artisan keystone:spec-sync` again. If the index version is stale, it is
 
 ### "Check [...] has an invalid slug"
 
-Slugs must look like `category/topic`, made of lower-case letters, digits, and single hyphens.
+Slugs must look like `category/topic`, made of lower-case letters, digits, and single hyphens. A check with an invalid slug, or one the container can't build, is reported to your exception handler and set aside, and the other checks keep running. `specification()->checks()->invalid()` lists set-aside checks, and `keystone:spec-check` prints them and exits with `1`.
 
 ### A check always shows as "errored"
 
@@ -52,7 +52,7 @@ No owner package has registered checks yet, or your `--category`/`--slug` filter
 
 ### keystone:spec-check fails even though most checks pass
 
-The command exits with `1` when any Required check fails, any Avoid practice is present, or any check errors. Failed Recommended and Optional checks don't fail it.
+The command exits with `1` when any Required check fails, any Avoid practice is present, any check errors, or a registered check could not be used. Failed Recommended and Optional checks don't fail it.
 
 ## MCP
 

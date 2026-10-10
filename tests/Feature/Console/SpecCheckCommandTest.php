@@ -47,6 +47,27 @@ it( 'fails when a required check fails', function (): void {
         ->assertFailed();
 } );
 
+it( 'runs the usable checks and fails when a registered check is invalid', function (): void {
+    specification()->registerCheck( DoctypeCheck::class )->registerCheck( new StubCheck( 'Bad Slug' ) );
+    Http::fake( [ SITE_URL => Http::response( "<!doctype html>\n<html></html>" ) ] );
+
+    $this->artisan( 'keystone:spec-check', [ '--url' => SITE_URL ] )
+        ->expectsOutputToContain( 'could not be used' )
+        ->expectsOutputToContain( 'The page starts with the HTML doctype.' )
+        ->assertFailed();
+} );
+
+it( 'fails when every registered check is invalid', function (): void {
+    specification()->registerCheck( new StubCheck( 'Bad Slug' ) );
+    Http::fake();
+
+    $this->artisan( 'keystone:spec-check', [ '--url' => SITE_URL ] )
+        ->expectsOutputToContain( 'could not be used' )
+        ->assertFailed();
+
+    Http::assertNothingSent();
+} );
+
 it( 'defaults to app.url', function (): void {
     config()->set( 'app.url', 'https://app.example.test' );
     specification()->registerCheck( DoctypeCheck::class );

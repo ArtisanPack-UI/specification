@@ -21,7 +21,7 @@ interface SpecCheck
 
 ### Rules
 
-- **`slug()`** must match a specification.website topic and the pattern `category/topic` (lower-case kebab segments). The registry rejects other values with `InvalidCheckException`.
+- **`slug()`** must match a specification.website topic and the pattern `category/topic` (lower-case kebab segments). The registry reports an `InvalidCheckException` for other values and sets the check aside (see `CheckRegistry::invalid()`), so a bad slug never stops other packages' checks from running.
 - **`status()`** must match the topic's upstream tier. Read it from the synced `Topic` if you want to follow upstream promotions automatically. The runner turns a result whose status differs from `status()` into an `Errored` result.
 - **`scope()`** decides which contexts the check runs against. The runner only calls `run()` for contexts with the same scope.
 - **`run()`** must return a result for its own slug, built with the `SpecResult` factories. Don't let expected failures throw. A thrown exception is caught, reported, and turned into an `Errored` result, which is a bug signal rather than a verdict.

@@ -67,7 +67,7 @@ Site checks run against a Site context. When any Page or Server check is selecte
 
 The command prints a results table and a four-tier summary (Required, Recommended, and Optional met, plus Avoid present).
 
-**Exit codes:** `0` when no blocking result was found; `1` when any **Required** check failed, any **Avoid** practice is present, any check **errored**, or the URL could not be fetched; `2` for an invalid URL or category. Failed Recommended and Optional checks do not fail the command, so it can gate a CI pipeline.
+**Exit codes:** `0` when no blocking result was found; `1` when any **Required** check failed, any **Avoid** practice is present, any check **errored**, any registered check **could not be used** (it is listed, and the usable checks still run), or the URL could not be fetched; `2` for an invalid URL or category. Failed Recommended and Optional checks do not fail the command, so it can gate a CI pipeline.
 
 ## Output Safety
 

@@ -34,8 +34,8 @@ use Throwable;
  * Site, Page, and Server checks run; the page is fetched once and its HTML
  * and response headers feed the Page and Server contexts. Section and Block
  * checks need editor context and are skipped. The command fails when any
- * Required check fails, any Avoid practice is present, or any check errors,
- * so it can gate a CI pipeline.
+ * Required check fails, any Avoid practice is present, any check errors, or
+ * any registered check could not be used, so it can gate a CI pipeline.
  *
  * @since 1.0.0
  */
@@ -96,19 +96,18 @@ class SpecCheckCommand extends Command
             return self::INVALID;
         }
 
-        try {
-            $checks = array_values( array_filter( $registry->all(), static fn ( SpecCheck $check ): bool => ( null === $slugs || in_array( $check->slug(), $slugs, true ) )
-                && ( null === $category || str_starts_with( $check->slug(), $category . '/' ) ) ) );
-        } catch ( Throwable $exception ) {
-            $this->components->error( $this->plain( $exception->getMessage() ) );
+        $checks = array_values( array_filter( $registry->all(), static fn ( SpecCheck $check ): bool => ( null === $slugs || in_array( $check->slug(), $slugs, true ) )
+            && ( null === $category || str_starts_with( $check->slug(), $category . '/' ) ) ) );
+        $invalid = $registry->invalid();
 
-            return self::FAILURE;
+        foreach ( $invalid as $class => $reason ) {
+            $this->components->error( __( 'Check [:class] could not be used: :reason', [ 'class' => $this->plain( $class ), 'reason' => $this->plain( $reason ) ] ) );
         }
 
         if ( [] === $checks ) {
             $this->components->warn( __( 'No specification checks are registered for this selection.' ) );
 
-            return self::SUCCESS;
+            return [] === $invalid ? self::SUCCESS : self::FAILURE;
         }
 
         $scopes = array_unique( array_map( static fn ( SpecCheck $check ): string => $check->scope()->value, $checks ) );
@@ -142,7 +141,7 @@ class SpecCheckCommand extends Command
 
         $this->renderResults( $url, $results, $editorOnly );
 
-        return $this->blocking( $results ) ? self::FAILURE : self::SUCCESS;
+        return [] !== $invalid || $this->blocking( $results ) ? self::FAILURE : self::SUCCESS;
     }
 
     /**

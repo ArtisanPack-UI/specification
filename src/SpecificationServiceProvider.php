@@ -40,6 +40,7 @@ use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Support\ServiceProvider;
+use Throwable;
 
 /**
  * Service provider for the Specification package.
@@ -125,6 +126,8 @@ class SpecificationServiceProvider extends ServiceProvider
      *
      * Loads migrations, registers configured checks, the scheduled sync, and
      * the Artisan commands, and registers publishable config and migrations.
+     * An invalid configured check is reported and set aside (see
+     * CheckRegistry::invalid()) rather than breaking the package.
      *
      * @since 1.0.0
      *
@@ -135,7 +138,13 @@ class SpecificationServiceProvider extends ServiceProvider
         $this->loadMigrationsFrom( __DIR__ . '/../database/migrations' );
 
         $this->callAfterResolving( CheckRegistry::class, function ( CheckRegistry $registry ): void {
-            $registry->registerMany( (array) $this->config( 'checks', [] ) );
+            foreach ( (array) $this->config( 'checks', [] ) as $check ) {
+                try {
+                    $registry->register( $check );
+                } catch ( Throwable $exception ) {
+                    $registry->reject( is_string( $check ) ? $check : ( is_object( $check ) ? $check::class : get_debug_type( $check ) ), $exception );
+                }
+            }
         } );
 
         if ( true === (bool) $this->config( 'sync.scheduled', true ) ) {
