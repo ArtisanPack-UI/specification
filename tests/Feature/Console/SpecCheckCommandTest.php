@@ -181,3 +181,21 @@ it( 'rejects invalid options', function ( array $options ): void {
     'not a URL'        => [ [ '--url' => 'example' ] ],
     'invalid category' => [ [ '--url' => SITE_URL, '--category' => '../seo' ] ],
 ] );
+
+it( 'warns when the URL returns an error status', function (): void {
+    specification()->registerCheck( DoctypeCheck::class );
+    Http::fake( [ SITE_URL => Http::response( "<!doctype html>\n<html></html>", 500 ) ] );
+
+    $this->artisan( 'keystone:spec-check', [ '--url' => SITE_URL ] )
+        ->expectsOutputToContain( 'returned HTTP 500' )
+        ->assertSuccessful();
+} );
+
+it( 'does not warn for a successful response', function (): void {
+    specification()->registerCheck( DoctypeCheck::class );
+    Http::fake( [ SITE_URL => Http::response( "<!doctype html>\n<html></html>" ) ] );
+
+    $this->artisan( 'keystone:spec-check', [ '--url' => SITE_URL ] )
+        ->doesntExpectOutputToContain( 'returned HTTP' )
+        ->assertSuccessful();
+} );

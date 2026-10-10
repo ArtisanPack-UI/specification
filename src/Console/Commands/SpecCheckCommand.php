@@ -127,6 +127,10 @@ class SpecCheckCommand extends Command
                 return self::FAILURE;
             }
 
+            if ( $response->status() >= 400 ) {
+                $this->components->warn( __( 'The URL returned HTTP :status; page and server checks ran against the error response.', [ 'status' => $response->status() ] ) );
+            }
+
             $contexts[] = SpecContext::page( $url, $response->body(), $response->headers(), [ 'status' => $response->status() ] );
             $contexts[] = SpecContext::server( $url, $response->headers(), [ 'status' => $response->status() ] );
         }
