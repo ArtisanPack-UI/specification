@@ -187,7 +187,7 @@ final class SqliteFtsIndex implements SearchIndex
      */
     public function matchExpression( string $query ): string
     {
-        preg_match_all( '/[\p{L}\p{N}]+/u', $query, $matches );
+        preg_match_all( '/[\p{L}\p{M}\p{N}]+/u', $query, $matches );
 
         $tokens = array_slice( array_unique( array_map( 'mb_strtolower', $matches[0] ) ), 0, self::MAX_TOKENS );
 

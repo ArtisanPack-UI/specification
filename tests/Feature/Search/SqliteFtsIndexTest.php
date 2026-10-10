@@ -105,3 +105,24 @@ it( 'uses WAL so searches can read while another connection rebuilds', function 
 
     $raw->exec( 'ROLLBACK' );
 } );
+
+it( 'keeps combining marks inside query tokens', function (): void {
+    $index = new SqliteFtsIndex( ':memory:' );
+
+    expect( $index->matchExpression( 'हिन्दी भाषा' ) )->toBe( '"हिन्दी"* "भाषा"*' )
+        ->and( $index->matchExpression( "cafe\u{0301} menu" ) )->toBe( "\"cafe\u{0301}\"* \"menu\"*" );
+
+    $topic = new ArtisanPackUI\Specification\Models\Topic( [
+        'slug'         => 'i18n/hindi',
+        'category'     => 'i18n',
+        'status'       => SpecStatus::Optional,
+        'resource_url' => 'https://specification.website/spec/i18n/hindi/',
+        'title'        => 'हिन्दी भाषा',
+        'summary'      => 'Summary',
+        'body_md'      => 'हिन्दी भाषा के लिए',
+    ] );
+
+    $index->rebuild( [ $topic ], 'v1' );
+
+    expect( $index->search( 'हिन्दी' ) )->toHaveCount( 1 );
+} );
