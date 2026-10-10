@@ -30,3 +30,5 @@ Without a doctype, browsers fall back to quirks mode, which emulates legacy rend
 ## Verification
 
 Run `document.compatMode` in the console. It should return `"CSS1Compat"`.
+
+Primary standard: [HTML Living Standard — The DOCTYPE](../references/html-living-standard-the-doctype.md).

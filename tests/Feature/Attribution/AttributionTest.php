@@ -39,7 +39,7 @@ it( 'escapes titles in HTML and Markdown attribution', function (): void {
 it( 'renders the body with attribution in every format', function (): void {
     $rendered = doctypeTopic()->render();
 
-    expect( $rendered->toHtml() )->toContain( '<h1>The HTML doctype</h1>' )
+    expect( $rendered->toHtml() )->toContain( '<h2>The HTML doctype</h2>' )
         ->and( $rendered->toHtml() )->toContain( 'class="spec-attribution"' )
         ->and( (string) $rendered )->toBe( $rendered->toHtml() )
         ->and( $rendered->toMarkdown() )->toStartWith( '# The HTML doctype' )
@@ -99,4 +99,92 @@ it( 'keeps the topic body out of model serialization', function (): void {
 
 it( 'renders through the entry point', function (): void {
     expect( specification()->render( doctypeTopic(), RenderSurface::Editor )->surface )->toBe( RenderSurface::Editor );
+} );
+
+it( 'never links a non-http(s) attribution URL', function ( string $url ): void {
+    $attribution = new Attribution( 'Title', $url );
+
+    expect( $attribution->toHtml() )->not->toContain( 'href="' . e( $url ) )
+        ->and( $attribution->toHtml() )->toContain( '“Title”' )
+        ->and( $attribution->toMarkdown() )->not->toContain( $url )
+        ->and( $attribution->toMarkdown() )->toStartWith( '“Title”' );
+} )->with( [
+    'javascript' => 'javascript:alert(1)',
+    'data'       => 'data:text/html,<script>alert(1)</script>',
+    'relative'   => '/spec/a/b/',
+] );
+
+it( 'keeps canonical upstream URLs and derives the rest from the slug', function ( mixed $url, string $expected ): void {
+    expect( Attribution::canonicalUrl( 'foundations/doctype', $url ) )->toBe( $expected );
+} )->with( [
+    'upstream'      => [ 'https://specification.website/spec/foundations/doctype/', 'https://specification.website/spec/foundations/doctype/' ],
+    'foreign host'  => [ 'https://evil.example/spec/foundations/doctype/', 'https://specification.website/spec/foundations/doctype/' ],
+    'look-alike'    => [ 'https://specification.website.evil.example/x', 'https://specification.website/spec/foundations/doctype/' ],
+    'javascript'    => [ 'javascript:alert(1)', 'https://specification.website/spec/foundations/doctype/' ],
+    'too long'      => [ 'https://specification.website/' . str_repeat( 'a', 600 ), 'https://specification.website/spec/foundations/doctype/' ],
+    'not a string'  => [ null, 'https://specification.website/spec/foundations/doctype/' ],
+] );
+
+it( 'resolves relative links in rendered topic bodies', function (): void {
+    $topic          = doctypeTopic();
+    $topic->body_md = '[standard](../references/html-living-standard-the-doctype.md) [hsts](/spec/security/hsts/) [sibling](html-lang.md) [gone](../references/unknown.md) ![img](/logo.png)';
+
+    $rendered = app( SpecTopicRenderer::class )->render( $topic );
+    $html     = $rendered->toHtml();
+
+    preg_match_all( '/(?:href|src)="([^"]+)"/', $html, $matches );
+
+    expect( $html )->toContain( 'href="https://html.spec.whatwg.org/multipage/syntax.html#the-doctype"' )
+        ->and( $html )->toContain( 'href="https://specification.website/spec/security/hsts/"' )
+        ->and( $html )->toContain( 'href="https://specification.website/spec/foundations/html-lang/"' )
+        ->and( $html )->toContain( 'src="https://specification.website/logo.png"' )
+        ->and( $html )->toContain( ' gone ' )
+        ->and( $html )->not->toContain( 'unknown.md' );
+
+    foreach ( $matches[1] as $url ) {
+        expect( $url )->toStartWith( 'https://' );
+    }
+
+    expect( $rendered->toMarkdown() )->not->toContain( '](../' )
+        ->and( $rendered->toMarkdown() )->not->toContain( '](/spec' )
+        ->and( $rendered->toMarkdown() )->toContain( '[standard](<https://html.spec.whatwg.org/multipage/syntax.html#the-doctype>)' );
+} );
+
+it( 'resolves the reference link in the synced fixture topic', function (): void {
+    expect( doctypeTopic()->render()->toHtml() )
+        ->toContain( 'href="https://html.spec.whatwg.org/multipage/syntax.html#the-doctype"' )
+        ->not->toContain( '../references/' );
+} );
+
+it( 'marks rendered topics as English and demotes body headings', function (): void {
+    $html = doctypeTopic()->render()->toHtml();
+
+    expect( $html )->toStartWith( '<div class="spec-topic" lang="en" dir="ltr"' )
+        ->and( $html )->not->toContain( '<h1>' )
+        ->and( $html )->toContain( '<h2>The HTML doctype</h2>' )
+        ->and( $html )->toContain( '<h3>Why it matters</h3>' );
+} );
+
+it( 'honours the configured heading offset', function ( int $offset, string $expected ): void {
+    config()->set( 'artisanpack.specification.render.heading_offset', $offset );
+    app()->forgetInstance( SpecTopicRenderer::class );
+
+    expect( doctypeTopic()->render()->toHtml() )->toContain( $expected );
+} )->with( [
+    'none'    => [ 0, '<h1>The HTML doctype</h1>' ],
+    'two'     => [ 2, '<h3>The HTML doctype</h3>' ],
+    'clamped' => [ 9, '<h6>The HTML doctype</h6>' ],
+] );
+
+it( 'lets translators localize the attribution quote marks', function (): void {
+    $path = sys_get_temp_dir() . '/spec-lang-' . bin2hex( random_bytes( 4 ) );
+    mkdir( $path );
+    file_put_contents( $path . '/fr.json', (string) json_encode( [ '“:title” from :source, licensed under :license.' => '«:title» de :source, sous licence :license.' ] ) );
+    app( 'translation.loader' )->addJsonPath( $path );
+    app()->setLocale( 'fr' );
+
+    $attribution = new Attribution( 'Le doctype', 'https://specification.website/spec/foundations/doctype/' );
+
+    expect( $attribution->toHtml() )->toContain( '«<a href="https://specification.website/spec/foundations/doctype/">Le doctype</a>» de ' )
+        ->and( $attribution->toMarkdown() )->toStartWith( '«[Le doctype](<https://specification.website/spec/foundations/doctype/>)» de ' );
 } );

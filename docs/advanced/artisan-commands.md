@@ -39,7 +39,7 @@ php artisan keystone:spec-diff --since=2026-09-01
 The output has two parts:
 
 1. **Snapshot diff.** The slugs that the sync producing the current snapshot added, updated, and removed.
-2. **Upstream changes.** Only when the [MCP client](Usage-Mcp-Client) is enabled: the `get_changes` entries since the last sync (or `--since`). These are changes not yet in your local snapshot. Run `keystone:spec-sync` to pull them.
+2. **Upstream changes.** Only when the [MCP client](Usage-Mcp-Client) is enabled: the `get_changes` entries since the last sync (or `--since`). These are changes not yet in your local snapshot. Run `keystone:spec-sync` to pull them. Upstream change dates are UTC days. The last sync time is converted to its UTC day, and that whole day is included, so changes from earlier on the sync day can appear even though they're already synced. `--since` is sent exactly as typed.
 
 Topics enforced by a registered check are marked `(checked)`, and the command summarises how many upstream changes affect registered checks.
 
@@ -67,7 +67,9 @@ Site checks run against a Site context. When any Page or Server check is selecte
 
 The command prints a results table and a four-tier summary (Required, Recommended, and Optional met, plus Avoid present).
 
-**Exit codes:** `0` when no blocking result was found; `1` when any **Required** check failed, any **Avoid** practice is present, any check **errored**, or the URL could not be fetched; `2` for an invalid URL or category. Failed Recommended and Optional checks do not fail the command, so it can gate a CI pipeline.
+If the URL returns a 4xx or 5xx status, the command warns that page and server checks ran against the error response.
+
+**Exit codes:** `0` when no blocking result was found; `1` when any **Required** check failed, any **Avoid** practice is present, any check **errored**, any registered check **could not be used** (it is listed, and the usable checks still run), or the URL could not be fetched; `2` for an invalid URL or category. Failed Recommended and Optional checks do not fail the command, so it can gate a CI pipeline.
 
 ## Output Safety
 

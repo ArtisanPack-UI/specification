@@ -46,6 +46,7 @@ it( 'parses a fixture topic', function (): void {
             'title'    => 'HTML Living Standard — The DOCTYPE',
             'resource' => 'https://html.spec.whatwg.org/multipage/syntax.html#the-doctype',
             'author'   => 'WHATWG',
+            'mirror'   => '../references/html-living-standard-the-doctype.md',
         ] ] );
 } );
 
@@ -91,3 +92,23 @@ it( 'rejects documents without front matter', function (): void {
 it( 'rejects invalid YAML front matter', function (): void {
     ( new TopicParser() )->parse( 'foundations', 'doctype', "---\ntitle: [unclosed\n---\nBody" );
 } )->throws( InvalidArchiveException::class, 'not valid YAML' );
+
+it( 'normalizes the conformance keyword', function ( string $value, ?string $expected ): void {
+    expect( ( new TopicParser() )->parse( 'foundations', 'doctype', topicDocument( [ 'conformance' => $value ] ) )->conformance )->toBe( $expected );
+} )->with( [
+    'must'          => [ '"MUST"', 'MUST' ],
+    'lower case'    => [ '"should not"', 'SHOULD NOT' ],
+    'extra spacing' => [ '"MUST  NOT"', 'MUST NOT' ],
+    'unknown'       => [ '"SOMETHING VERY LONG INDEED"', null ],
+    'not a string'  => [ '[ MUST ]', null ],
+] );
+
+it( 'rejects titles longer than the column', function (): void {
+    ( new TopicParser() )->parse( 'foundations', 'doctype', topicDocument( [ 'title' => '"' . str_repeat( 'x', 256 ) . '"' ] ) );
+} )->throws( InvalidArchiveException::class, 'longer than 255' );
+
+it( 'falls back to the derived URL when the resource is longer than the column', function (): void {
+    $topic = ( new TopicParser() )->parse( 'foundations', 'doctype', topicDocument( [ 'resource' => 'https://specification.website/' . str_repeat( 'a', 600 ) ] ) );
+
+    expect( $topic->resourceUrl )->toBe( 'https://specification.website/spec/foundations/doctype/' );
+} );

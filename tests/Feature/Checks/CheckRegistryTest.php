@@ -95,14 +95,62 @@ it( 'rejects classes that do not implement SpecCheck', function (): void {
     app( CheckRegistry::class )->register( stdClass::class );
 } )->throws( InvalidCheckException::class, 'must implement' );
 
-it( 'rejects tagged services that do not implement SpecCheck', function (): void {
+it( 'sets aside tagged services that do not implement SpecCheck', function (): void {
     app()->bind( 'not-a-check', fn (): stdClass => new stdClass() );
     app()->tag( [ 'not-a-check' ], CheckRegistry::TAG );
 
-    app( CheckRegistry::class )->all();
-} )->throws( InvalidCheckException::class, 'must implement' );
+    $registry = app( CheckRegistry::class )->register( StubCheck::class );
 
-it( 'rejects checks with malformed slugs', function ( string $slug ): void {
-    app( CheckRegistry::class )->register( new StubCheck( $slug ) )->all();
-} )->with( [ 'doctype', 'Foundations/doctype', 'foundations/', 'foundations/doc type', 'a/b/c', '../etc' ] )
-    ->throws( InvalidCheckException::class, 'invalid slug' );
+    expect( $registry->all() )->toHaveCount( 1 )
+        ->and( $registry->invalid() )->toHaveKey( stdClass::class )
+        ->and( $registry->invalid()[ stdClass::class ] )->toContain( 'must implement' );
+} );
+
+it( 'sets aside checks with malformed slugs', function ( string $slug ): void {
+    $registry = app( CheckRegistry::class )->register( new class ( $slug ) extends StubCheck {} )->register( StubCheck::class );
+
+    expect( $registry->slugs() )->toBe( [ 'foundations/doctype' ] )
+        ->and( array_values( $registry->invalid() )[0] )->toContain( 'invalid slug' );
+} )->with( [ 'doctype', 'Foundations/doctype', 'foundations/', 'foundations/doc type', 'a/b/c', '../etc' ] );
+
+it( 'sets aside checks that cannot be resolved and reports them once', function (): void {
+    $reported = 0;
+    app( Illuminate\Contracts\Debug\ExceptionHandler::class )->reportable( function ( Throwable $exception ) use ( &$reported ): void {
+        $reported++;
+    } );
+
+    $registry = app( CheckRegistry::class )->registerMany( [ UnresolvableCheck::class, StubCheck::class ] );
+
+    $registry->all();
+    $registry->register( UnresolvableCheck::class );
+
+    expect( $registry->slugs() )->toBe( [ 'foundations/doctype' ] )
+        ->and( $registry->invalid() )->toHaveKey( UnresolvableCheck::class )
+        ->and( $reported )->toBe( 1 );
+} );
+
+it( 'does not let an invalid configured check break the package', function (): void {
+    config()->set( 'artisanpack.specification.checks', [ stdClass::class, StubCheck::class ] );
+    app()->forgetInstance( CheckRegistry::class );
+    app()->forgetInstance( ArtisanPackUI\Specification\Specification::class );
+    app()->forgetInstance( 'specification' );
+
+    expect( specification()->search( 'doctype' ) )->toBe( [] )
+        ->and( specification()->checks()->slugs() )->toBe( [ 'foundations/doctype' ] )
+        ->and( specification()->checks()->invalid() )->toHaveKey( stdClass::class );
+} );
+
+/**
+ * A check whose constructor dependency the container cannot build.
+ */
+class UnresolvableCheck extends StubCheck
+{
+    public function __construct( UnresolvableDependency $dependency )
+    {
+        parent::__construct( 'seo/unresolvable' );
+    }
+}
+
+interface UnresolvableDependency
+{
+}

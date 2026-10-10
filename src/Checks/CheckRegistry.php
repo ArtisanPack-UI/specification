@@ -17,6 +17,7 @@ use ArtisanPackUI\Specification\Contracts\SpecCheck;
 use ArtisanPackUI\Specification\Enums\CheckScope;
 use ArtisanPackUI\Specification\Exceptions\InvalidCheckException;
 use Illuminate\Contracts\Container\Container;
+use Throwable;
 
 /**
  * Holds every SpecCheck known to the application.
@@ -26,6 +27,10 @@ use Illuminate\Contracts\Container\Container;
  * config array, and container services tagged with TAG. Class-string
  * registrations are resolved lazily through the container. Each check class
  * is registered at most once.
+ *
+ * A check that cannot be resolved, or that reports an invalid slug, is
+ * reported, set aside, and listed by invalid() instead of breaking every
+ * other check.
  *
  * @since 1.0.0
  */
@@ -51,6 +56,13 @@ final class CheckRegistry
      * @var array<class-string<SpecCheck>, class-string<SpecCheck>|SpecCheck>
      */
     private array $checks = [];
+
+    /**
+     * Checks that could not be used, with the reason, keyed by class name.
+     *
+     * @var array<string, string>
+     */
+    private array $invalid = [];
 
     /**
      * Creates a new registry.
@@ -85,7 +97,9 @@ final class CheckRegistry
 
         $class = is_string( $check ) ? ltrim( $check, '\\' ) : $check::class;
 
-        $this->checks[ $class ] ??= $check;
+        if ( ! isset( $this->invalid[ $class ] ) ) {
+            $this->checks[ $class ] ??= $check;
+        }
 
         return $this;
     }
@@ -109,43 +123,96 @@ final class CheckRegistry
     }
 
     /**
-     * Gets every registered check, including tagged services.
+     * Gets every usable registered check, including tagged services.
+     *
+     * Checks that fail to resolve or report an invalid slug are reported,
+     * removed, and listed by invalid().
      *
      * @since 1.0.0
-     *
-     * @throws InvalidCheckException When a check reports an invalid slug.
      *
      * @return array<int, SpecCheck>
      */
     public function all(): array
     {
-        foreach ( $this->container->tagged( self::TAG ) as $tagged ) {
-            if ( ! $tagged instanceof SpecCheck ) {
-                throw new InvalidCheckException( __( 'Services tagged [:tag] must implement :contract.', [
-                    'tag'      => self::TAG,
-                    'contract' => SpecCheck::class,
-                ] ) );
-            }
+        try {
+            foreach ( $this->container->tagged( self::TAG ) as $tagged ) {
+                if ( ! $tagged instanceof SpecCheck ) {
+                    $this->reject( is_object( $tagged ) ? $tagged::class : get_debug_type( $tagged ), new InvalidCheckException( __( 'Services tagged [:tag] must implement :contract.', [
+                        'tag'      => self::TAG,
+                        'contract' => SpecCheck::class,
+                    ] ) ) );
 
-            $this->register( $tagged );
+                    continue;
+                }
+
+                $this->register( $tagged );
+            }
+        } catch ( Throwable $exception ) {
+            $this->reject( self::TAG, $exception );
         }
 
         foreach ( $this->checks as $class => $check ) {
-            if ( is_string( $check ) ) {
-                $check = $this->container->make( $check );
-            }
+            try {
+                if ( is_string( $check ) ) {
+                    $check = $this->container->make( $check );
+                }
 
-            if ( 1 !== preg_match( self::SLUG_PATTERN, $check->slug() ) ) {
-                throw new InvalidCheckException( __( 'Check [:class] has an invalid slug [:slug]; expected "category/topic".', [
-                    'class' => $class,
-                    'slug'  => $check->slug(),
-                ] ) );
+                if ( 1 !== preg_match( self::SLUG_PATTERN, $check->slug() ) ) {
+                    throw new InvalidCheckException( __( 'Check [:class] has an invalid slug [:slug]; expected "category/topic".', [
+                        'class' => $class,
+                        'slug'  => $check->slug(),
+                    ] ) );
+                }
+            } catch ( Throwable $exception ) {
+                $this->reject( $class, $exception );
+
+                continue;
             }
 
             $this->checks[ $class ] = $check;
         }
 
         return array_values( $this->checks );
+    }
+
+    /**
+     * Gets the checks that could not be used.
+     *
+     * @since 1.0.0
+     *
+     * @return array<string, string> Reasons keyed by check class name (or the tag when tag resolution failed).
+     */
+    public function invalid(): array
+    {
+        return $this->invalid;
+    }
+
+    /**
+     * Sets a check aside as unusable.
+     *
+     * The exception is reported once, the check is removed from the registry,
+     * and later registrations of the same class are ignored.
+     *
+     * @since 1.0.0
+     *
+     * @param  string     $class      The check class name.
+     * @param  Throwable  $exception  Why the check cannot be used.
+     *
+     * @return static
+     */
+    public function reject( string $class, Throwable $exception ): static
+    {
+        $class = ltrim( $class, '\\' );
+
+        unset( $this->checks[ $class ] );
+
+        if ( ! isset( $this->invalid[ $class ] ) ) {
+            report( $exception );
+
+            $this->invalid[ $class ] = $exception->getMessage();
+        }
+
+        return $this;
     }
 
     /**

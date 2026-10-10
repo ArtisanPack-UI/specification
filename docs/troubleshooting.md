@@ -30,17 +30,23 @@ The archive downloaded but none of its topics parsed. The existing snapshot and 
 
 ### SearchIndexUnavailableException
 
-The SQLite index file could not be opened, or your SQLite build lacks FTS5. Check that `ext-pdo_sqlite` is installed, that the directory for `artisanpack.specification.index.path` is writable, and that `SELECT sqlite_compileoption_used('ENABLE_FTS5')` returns `1`.
+The SQLite index file could not be opened, your SQLite build lacks FTS5, or (with the message "being rebuilt by another process") another request held the index rebuild lock for longer than 10 seconds. That last case is transient, so retry the search. Check that `ext-pdo_sqlite` is installed, that the directory for `artisanpack.specification.index.path` is writable, and that `SELECT sqlite_compileoption_used('ENABLE_FTS5')` returns `1`.
 
 ### Search returns nothing after a sync
 
-Run `php artisan keystone:spec-sync` again. If the index version is stale, it is rebuilt even when the archive hasn't changed.
+`search()` rebuilds a stale or empty index from the topic rows before it searches, so this usually fixes itself on the next search. If it doesn't, check that the database has topics (`Topic::query()->count()`) and run `php artisan keystone:spec-sync`. Re-running it rebuilds a stale index even when the archive hasn't changed.
+
+## Multi-server Deployments
+
+Topic and snapshot rows live in your shared database, but the search index and the vendored snapshot are files under `storage_path()` on each server. The scheduled sync runs on one server only. On every other server (and after a deploy to a fresh or ephemeral filesystem) the first `search()` call finds that the local index doesn't match the current snapshot and rebuilds it from the database, under a short cache lock so concurrent requests don't all rebuild at once. A request that finds another rebuild in progress waits up to 10 seconds (`Specification::INDEX_LOCK_WAIT_SECONDS`). It never searches an index it hasn't confirmed is current, so if the wait runs out it throws `SearchIndexUnavailableException` ("The search index is being rebuilt by another process"). The cache lock only coordinates requests that share a cache store.
+
+Keep `artisanpack.specification.index.path` (`SPECIFICATION_INDEX_PATH`) on each server's local disk. The index uses SQLite's WAL mode, so searches keep reading while a rebuild writes, and WAL isn't safe on network filesystems such as NFS or EFS. The on-disk snapshot is only an offline copy of the archive. Nothing reads it at request time, so it doesn't need to be shared either.
 
 ## Checks
 
 ### "Check [...] has an invalid slug"
 
-Slugs must look like `category/topic`, made of lower-case letters, digits, and single hyphens.
+Slugs must look like `category/topic`, made of lower-case letters, digits, and single hyphens. A check with an invalid slug, or one the container can't build, is reported to your exception handler and set aside, and the other checks keep running. `specification()->checks()->invalid()` lists set-aside checks, and `keystone:spec-check` prints them and exits with `1`.
 
 ### A check always shows as "errored"
 
@@ -52,7 +58,7 @@ No owner package has registered checks yet, or your `--category`/`--slug` filter
 
 ### keystone:spec-check fails even though most checks pass
 
-The command exits with `1` when any Required check fails, any Avoid practice is present, or any check errors. Failed Recommended and Optional checks don't fail it.
+The command exits with `1` when any Required check fails, any Avoid practice is present, any check errors, or a registered check could not be used. Failed Recommended and Optional checks don't fail it.
 
 ## MCP
 

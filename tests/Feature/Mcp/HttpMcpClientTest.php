@@ -296,3 +296,50 @@ it( 'refuses oversized responses', function (): void {
 
     mcpClient()->listTopics();
 } )->throws( McpRequestException::class, 'exceeds the' );
+
+it( 'normalizes MCP topic URLs to the upstream origin', function ( mixed $url ): void {
+    $topic = ArtisanPackUI\Specification\Mcp\McpTopic::fromArray( upstreamDoctype( [ 'url' => $url ] ) );
+
+    expect( $topic->url )->toBe( 'https://specification.website/spec/foundations/doctype/' )
+        ->and( $topic->attribution()->toHtml() )->not->toContain( 'javascript:' )
+        ->and( $topic->attribution()->toHtml() )->not->toContain( 'evil.example' );
+} )->with( [
+    'javascript'   => 'javascript:alert(1)',
+    'foreign host' => 'https://evil.example/spec/foundations/doctype/',
+    'missing'      => null,
+] );
+
+it( 'clamps the list and change limits to the documented ranges', function ( string $tool, Closure $call, int $expected ): void {
+    fakeMcpTools( [
+        'list_topics' => [ 'topics' => [] ],
+        'get_changes' => [ 'changes' => [] ],
+    ] );
+
+    $call( mcpClient() );
+
+    Http::assertSent( fn ( Request $request ): bool => $tool === $request->data()['params']['name']
+        && $expected === ( (array) $request->data()['params']['arguments'] )['limit'] );
+} )->with( [
+    'list above'    => [ 'list_topics', fn ( HttpMcpClient $client ) => $client->listTopics( limit: 1000 ), 200 ],
+    'list below'    => [ 'list_topics', fn ( HttpMcpClient $client ) => $client->listTopics( limit: 0 ), 1 ],
+    'changes above' => [ 'get_changes', fn ( HttpMcpClient $client ) => $client->getChanges( limit: 500 ), 100 ],
+    'changes below' => [ 'get_changes', fn ( HttpMcpClient $client ) => $client->getChanges( limit: -5 ), 1 ],
+] );
+
+it( 'tolerates a JSON-RPC error whose message is not a string', function (): void {
+    Http::fake( [ MCP_URL => fn ( Request $request ) => Http::response( [
+        'jsonrpc' => '2.0',
+        'id'      => $request->data()['id'],
+        'error'   => [ 'code' => -32000, 'message' => [ 'nested' => 'value' ] ],
+    ] ) ] );
+
+    mcpClient()->listTopics();
+} )->throws( McpRequestException::class, 'Unknown error' );
+
+it( 'sends the UTC day for a date-time since value', function (): void {
+    fakeMcpTools( [ 'get_changes' => [ 'changes' => [] ] ] );
+
+    mcpClient()->getChanges( Carbon\CarbonImmutable::parse( '2026-09-01 23:30:00', 'America/Chicago' ) );
+
+    Http::assertSent( fn ( Request $request ): bool => '2026-09-02' === ( (array) $request->data()['params']['arguments'] )['since'] );
+} );

@@ -40,7 +40,21 @@ final class TopicParser
      *
      * @var array<int, string>
      */
-    private const SOURCE_KEYS = [ 'id', 'title', 'resource', 'author' ];
+    private const SOURCE_KEYS = [ 'id', 'title', 'resource', 'author', 'mirror' ];
+
+    /**
+     * RFC 2119 keywords accepted as a topic's conformance.
+     *
+     * @var array<int, string>
+     */
+    private const CONFORMANCE_KEYWORDS = [ 'MUST', 'MUST NOT', 'SHOULD', 'SHOULD NOT', 'MAY' ];
+
+    /**
+     * Longest slug and title accepted (the `slug` and `title` column lengths).
+     *
+     * @var int
+     */
+    private const MAX_STRING_LENGTH = 255;
 
     /**
      * Splits a document into its front matter and body.
@@ -116,18 +130,26 @@ final class TopicParser
             ] ) );
         }
 
-        $slug = $category . '/' . $topic;
+        $slug  = $category . '/' . $topic;
+        $title = trim( $meta['title'] );
+
+        if ( strlen( $slug ) > self::MAX_STRING_LENGTH || mb_strlen( $title ) > self::MAX_STRING_LENGTH ) {
+            throw new InvalidArchiveException( __( 'Topic [:slug] has a slug or title longer than :max characters.', [
+                'slug' => mb_substr( $slug, 0, 64 ),
+                'max'  => self::MAX_STRING_LENGTH,
+            ] ) );
+        }
 
         return new OkfTopic(
             $slug,
             $category,
             $status,
-            is_string( $meta['conformance'] ?? null ) ? $meta['conformance'] : null,
-            trim( $meta['title'] ),
+            $this->conformance( $meta['conformance'] ?? null ),
+            $title,
             trim( $meta['description'] ),
             $body,
             $this->sources( $meta['sources'] ?? [] ),
-            $this->resourceUrl( $slug, $meta['resource'] ?? null ),
+            Attribution::canonicalUrl( $slug, $meta['resource'] ?? null ),
             $this->timestamp( $meta['source_updated_at'] ?? null ),
         );
     }
@@ -162,7 +184,7 @@ final class TopicParser
                 }
             }
 
-            if ( isset( $entry['resource'] ) && ! $this->isHttpUrl( $entry['resource'] ) ) {
+            if ( isset( $entry['resource'] ) && ! Attribution::isHttpUrl( $entry['resource'] ) ) {
                 unset( $entry['resource'] );
             }
 
@@ -175,27 +197,23 @@ final class TopicParser
     }
 
     /**
-     * Gets the canonical topic URL, falling back to one derived from the slug.
-     *
-     * Only URLs on the upstream origin are accepted, so attribution links can
-     * never point elsewhere.
+     * Normalizes the RFC 2119 conformance keyword.
      *
      * @since 1.0.0
      *
-     * @param  string  $slug      The topic slug.
-     * @param  mixed   $resource  The front-matter `resource` value.
+     * @param  mixed  $value  The raw value.
      *
-     * @return string
+     * @return string|null Null when the value is not a known keyword.
      */
-    private function resourceUrl( string $slug, mixed $resource ): string
+    private function conformance( mixed $value ): ?string
     {
-        $prefix = Attribution::SOURCE_URL . '/';
-
-        if ( is_string( $resource ) && str_starts_with( $resource, $prefix ) && $this->isHttpUrl( $resource ) ) {
-            return $resource;
+        if ( ! is_string( $value ) ) {
+            return null;
         }
 
-        return $prefix . 'spec/' . $slug . '/';
+        $keyword = strtoupper( (string) preg_replace( '/\s+/', ' ', trim( $value ) ) );
+
+        return in_array( $keyword, self::CONFORMANCE_KEYWORDS, true ) ? $keyword : null;
     }
 
     /**
@@ -222,20 +240,5 @@ final class TopicParser
         } catch ( Throwable ) {
             return null;
         }
-    }
-
-    /**
-     * Determines whether a value is an absolute http(s) URL.
-     *
-     * @since 1.0.0
-     *
-     * @param  string  $url  The value.
-     *
-     * @return bool
-     */
-    private function isHttpUrl( string $url ): bool
-    {
-        return false !== filter_var( $url, FILTER_VALIDATE_URL )
-            && in_array( strtolower( (string) parse_url( $url, PHP_URL_SCHEME ) ), [ 'http', 'https' ], true );
     }
 }

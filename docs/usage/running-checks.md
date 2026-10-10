@@ -39,6 +39,7 @@ The runner isolates failures:
 
 - A check that throws produces an `Errored` result (and the exception is reported) instead of aborting the run.
 - A check that returns a result for a different slug, or a different status than it declares, produces an `Errored` result.
+- A registered check that can't be used, because the container can't build it or its slug is invalid, is reported and set aside. The other checks still run. `specification()->checks()->invalid()` lists the checks that were set aside, with the reason.
 
 ## Autofixes
 

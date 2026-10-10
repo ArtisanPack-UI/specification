@@ -21,7 +21,7 @@ interface SpecCheck
 
 ### Rules
 
-- **`slug()`** must match a specification.website topic and the pattern `category/topic` (lower-case kebab segments). The registry rejects other values with `InvalidCheckException`.
+- **`slug()`** must match a specification.website topic and the pattern `category/topic` (lower-case kebab segments). The registry reports an `InvalidCheckException` for other values and sets the check aside (see `CheckRegistry::invalid()`), so a bad slug never stops other packages' checks from running.
 - **`status()`** must match the topic's upstream tier. Read it from the synced `Topic` if you want to follow upstream promotions automatically. The runner turns a result whose status differs from `status()` into an `Errored` result.
 - **`scope()`** decides which contexts the check runs against. The runner only calls `run()` for contexts with the same scope.
 - **`run()`** must return a result for its own slug, built with the `SpecResult` factories. Don't let expected failures throw. A thrown exception is caught, reported, and turned into an `Errored` result, which is a bug signal rather than a verdict.
@@ -82,7 +82,7 @@ Messages are for people, so translate them. `details` is for UIs and agents, so 
 
 A check knows *what* to change but rarely *where* it lives. The reference check asks the caller to pass a writer in the context data, and returns `null` without one. Reusing `run()` keeps the "is it already passing?" logic in one place.
 
-This simplified version handles only a missing doctype. The real `DoctypeCheck` also replaces legacy doctypes and moves misplaced ones.
+This simplified version handles only a missing doctype. The real `DoctypeCheck` also replaces legacy doctypes and moves misplaced ones, and it ignores doctype-like text inside comments and `script`, `style`, `textarea`, and `title` elements so its autofix never rewrites page code or content.
 
 ```php
     public const HTML_WRITER = 'html_writer';
@@ -188,5 +188,5 @@ Each owner package should list the slugs it covers in its README:
 - [ ] Missing inputs return `skipped`, not `failed`
 - [ ] Messages are translatable; `details` are structured
 - [ ] `autofix()` has no side effects and returns `null` when it cannot apply the fix
-- [ ] Agent Readiness checks for experimental topics respect `artisanpack.specification.agent_readiness_experimental`
+- [ ] Agent Readiness checks for experimental topics only register or run when `specification()->agentReadinessExperimentalEnabled()` is `true`
 - [ ] Tests cover pass, fail, skip, and autofix paths (see [Testing SpecChecks](Advanced-Testing-Checks))

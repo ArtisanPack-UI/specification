@@ -70,7 +70,7 @@ final class FakeMcpClient implements McpClient
 
     public function getChanges( DateTimeInterface|string|null $since = null, ?ChangeType $type = null, ?int $limit = null ): McpChangeSet
     {
-        $since = $since instanceof DateTimeInterface ? CarbonImmutable::instance( $since )->toDateString() : $since;
+        $since = $since instanceof DateTimeInterface ? CarbonImmutable::instance( $since )->utc()->toDateString() : $since;
 
         $this->record( 'getChanges', compact( 'since', 'type', 'limit' ) );
 

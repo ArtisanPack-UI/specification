@@ -28,6 +28,7 @@ return new class () extends Migration {
             $table->string( 'version', 64 )->unique();
             $table->string( 'okf_version', 16 )->nullable();
             $table->unsignedInteger( 'topic_count' );
+            $table->json( 'changes' )->nullable();
             $table->timestamp( 'synced_at' )->index();
             $table->timestamps();
         } );

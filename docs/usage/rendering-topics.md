@@ -23,7 +23,7 @@ A `RenderedTopic` can be output in several formats, and every one includes the a
 
 | Method | Output |
 |--------|--------|
-| `toHtml()` / `(string)` | `<div class="spec-topic" data-spec-slug="…">` containing the body HTML and a `<p class="spec-attribution">` |
+| `toHtml()` / `(string)` | `<div class="spec-topic" lang="en" dir="ltr" data-spec-slug="…">` containing the body HTML and a `<p class="spec-attribution">` |
 | `toMarkdown()` | Body and attribution separated by `---` |
 | `toArray()` / `json_encode()` | `slug`, `surface`, `placement`, `body_md`, and the attribution fields |
 
@@ -34,6 +34,34 @@ A `RenderedTopic` can be output in several formats, and every one includes the a
 ```
 
 Topic Markdown comes from a third party. The renderer escapes raw HTML in it and drops unsafe link protocols such as `javascript:`.
+
+## Headings and Language
+
+Every topic body starts with a `#` title. In HTML output, body headings are demoted by `artisanpack.specification.render.heading_offset` levels (default `1`, so the title becomes an `<h2>`) to keep your page's heading outline intact. Set it to `0` to keep the original levels. Markdown output is unchanged.
+
+The wrapper carries `lang="en"` and `dir="ltr"` because topic text is English, so screen readers pronounce it correctly in a localized app.
+
+## Links
+
+OKF topic bodies link relative to the bundle and to the upstream site, which would break once the text is displayed on your site. The renderer makes every link absolute in both `toHtml()` and `toMarkdown()`:
+
+| Link in the topic body | Rendered as |
+|------------------------|-------------|
+| `../references/{source-id}.md` | The cited source's own URL (from the topic's `sources`) |
+| `/spec/security/hsts/`, `/llms.txt` | `https://specification.website/spec/security/hsts/`, `https://specification.website/llms.txt` |
+| `hsts.md`, `../security/hsts.md` | `https://specification.website/spec/security/hsts/` |
+| `https://…`, `mailto:…`, `#fragment` | Unchanged |
+
+A link that can't be resolved (an unknown reference, a path outside the bundle, or an unsafe scheme) is dropped and its text is kept. Code blocks and inline code are left alone. `TopicLinkResolver` does the resolving, and you can use it directly when you handle topic Markdown yourself:
+
+```php
+use ArtisanPackUI\Specification\Attribution\TopicLinkResolver;
+
+$links = TopicLinkResolver::forTopic( $topic );
+
+$links->resolve( '../references/html-living-standard-the-doctype.md' );
+$links->rewriteMarkdown( $markdown );
+```
 
 ## Surfaces
 
@@ -64,5 +92,7 @@ $attribution->toHtml();     // linked title, source, and license
 $attribution->toMarkdown();
 $attribution->toText();
 ```
+
+Attribution output only links `http` and `https` URLs. Any other scheme (for example `javascript:`) is rendered as plain text. Use `Attribution::canonicalUrl( $slug, $url )` to normalize a URL from an untrusted source to the upstream origin.
 
 See [Attribution Requirements](Advanced-Attribution-Requirements) for what consumers must honour.

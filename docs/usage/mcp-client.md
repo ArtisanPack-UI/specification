@@ -44,7 +44,9 @@ $hits    = $mcp->search( 'content security policy', limit: 10 );
 | `listTopics()` | `list_topics` | `array<McpTopic>` in canonical spec order |
 | `getTopic()` | `get_topic` | `McpTopic` including `markdown` and `updatedAt` |
 | `getChanges()` | `get_changes` | `McpChangeSet` (newest first) |
-| `search()` | `search` | `array<McpTopic>`, most relevant first. The limit is clamped to 1–25 |
+| `search()` | `search` | `array<McpTopic>`, most relevant first |
+
+Limits are clamped to the ranges the server accepts: 1–200 for `listTopics()` (pass `null` for all topics), 1–100 for `getChanges()`, and 1–25 for `search()`.
 
 ### Slugs
 
@@ -57,6 +59,8 @@ The upstream server uses bare slugs (`doctype`). The client normalizes every slu
 ### Attribution
 
 Topic summaries and Markdown from the MCP server are CC BY 4.0 text too. `McpTopic::attribution()` returns the `Attribution` to display alongside them, and `McpTopic::toArray()` leaves the Markdown body out.
+
+Topic URLs returned by the server are normalized with `Attribution::canonicalUrl()`. A missing URL, or one that isn't an `https://specification.website/` URL, is replaced with the URL derived from the topic slug, so attribution links always point at the upstream site.
 
 ## Errors
 

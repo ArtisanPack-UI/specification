@@ -17,7 +17,9 @@ use ArtisanPackUI\Specification\Enums\RenderSurface;
 use ArtisanPackUI\Specification\Exceptions\LicenseViolationException;
 use ArtisanPackUI\Specification\Models\Topic;
 use League\CommonMark\Environment\Environment;
+use League\CommonMark\Event\DocumentParsedEvent;
 use League\CommonMark\Extension\CommonMark\CommonMarkCoreExtension;
+use League\CommonMark\Extension\CommonMark\Node\Block\Heading;
 use League\CommonMark\Extension\GithubFlavoredMarkdownExtension;
 use League\CommonMark\MarkdownConverter;
 
@@ -27,7 +29,8 @@ use League\CommonMark\MarkdownConverter;
  * Attribution is enforced here rather than by callers: a RenderedTopic always
  * carries its CC BY 4.0 attribution, and the LicenseGuard is consulted before
  * anything is produced. Topic Markdown comes from a third party, so raw HTML
- * in it is escaped and unsafe link protocols are dropped.
+ * in it is escaped, unsafe link protocols are dropped, and relative links
+ * are resolved to absolute upstream URLs.
  *
  * @since 1.0.0
  */
@@ -45,10 +48,14 @@ final class SpecTopicRenderer
      *
      * @since 1.0.0
      *
-     * @param  LicenseGuard  $guard  The license guard.
+     * @param  LicenseGuard  $guard          The license guard.
+     * @param  int           $headingOffset  Levels to demote body headings by in HTML (0–5), so a
+     *                                       topic's `#` title does not add an `<h1>` to the host page.
      */
-    public function __construct( private readonly LicenseGuard $guard )
+    public function __construct( private readonly LicenseGuard $guard, int $headingOffset = 1 )
     {
+        $headingOffset = max( 0, min( 5, $headingOffset ) );
+
         $environment = new Environment( [
             'html_input'         => 'escape',
             'allow_unsafe_links' => false,
@@ -56,6 +63,16 @@ final class SpecTopicRenderer
         ] );
         $environment->addExtension( new CommonMarkCoreExtension() );
         $environment->addExtension( new GithubFlavoredMarkdownExtension() );
+
+        if ( $headingOffset > 0 ) {
+            $environment->addEventListener( DocumentParsedEvent::class, static function ( DocumentParsedEvent $event ) use ( $headingOffset ): void {
+                foreach ( $event->getDocument()->iterator() as $node ) {
+                    if ( $node instanceof Heading ) {
+                        $node->setLevel( min( 6, $node->getLevel() + $headingOffset ) );
+                    }
+                }
+            } );
+        }
 
         $this->converter = new MarkdownConverter( $environment );
     }
@@ -83,6 +100,7 @@ final class SpecTopicRenderer
             $this->guard->placement( $surface ),
             $surface,
             $this->converter,
+            TopicLinkResolver::forTopic( $topic ),
         );
     }
 }

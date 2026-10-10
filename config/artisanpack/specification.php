@@ -98,6 +98,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Topic Rendering
+    |--------------------------------------------------------------------------
+    |
+    | Every topic body starts with a `#` title. In HTML output its headings
+    | are demoted by this many levels (0–5) so a rendered topic does not add
+    | another <h1> to your page. Set it to 0 to keep the original levels.
+    |
+    */
+
+    'render' => [
+        'heading_offset' => (int) env( 'SPECIFICATION_RENDER_HEADING_OFFSET', 1 ),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | MCP Client
     |--------------------------------------------------------------------------
     |
@@ -120,6 +135,8 @@ return [
     |
     | Emerging Agent Readiness topics (WebMCP, DNS-AID, ai-catalog, etc.) are
     | still moving targets upstream and stay off unless explicitly enabled.
+    | Owner packages read this through
+    | specification()->agentReadinessExperimentalEnabled().
     |
     */
 

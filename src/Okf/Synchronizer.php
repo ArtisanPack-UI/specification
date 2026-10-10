@@ -15,12 +15,14 @@ namespace ArtisanPackUI\Specification\Okf;
 
 use ArtisanPackUI\Specification\Attribution\Attribution;
 use ArtisanPackUI\Specification\Contracts\SearchIndex;
+use ArtisanPackUI\Specification\Exceptions\SpecificationException;
 use ArtisanPackUI\Specification\Exceptions\SyncFailedException;
 use ArtisanPackUI\Specification\Models\Snapshot;
 use ArtisanPackUI\Specification\Models\Topic;
 use Illuminate\Contracts\Cache\LockProvider;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Filesystem\Filesystem;
+use Throwable;
 
 /**
  * Syncs the OKF bundle into the snapshot directory, the database, and the
@@ -31,6 +33,11 @@ use Illuminate\Filesystem\Filesystem;
  * the search index if it is stale). Topic rows are upserted by slug and only
  * rewritten when their content changes; topics no longer in the bundle are
  * deleted, except ones that failed to parse this time, which are kept.
+ *
+ * The database is updated first, inside a transaction; the on-disk snapshot
+ * and the search index follow. Anything that fails surfaces as a
+ * SpecificationException, and a later sync of the same archive repairs a
+ * snapshot or index that was left behind.
  *
  * @since 1.0.0
  */
@@ -131,29 +138,47 @@ final class Synchronizer
      * @param  bool         $force        Re-apply even if the archive matches the current snapshot.
      * @param  string|null  $archivePath  Sync from a local archive instead of downloading.
      *
+     * @throws SpecificationException When the archive cannot be fetched or applied.
+     *
      * @return SyncResult
      */
     private function perform( bool $force, ?string $archivePath ): SyncResult
     {
         $archive = null === $archivePath ? $this->downloader->download() : $this->readLocal( $archivePath );
         $version = hash( 'sha256', $archive );
-        $current = Snapshot::current();
 
-        if ( ! $force && $current?->version === $version ) {
-            if ( $this->index->version() !== $version ) {
-                $this->index->rebuild( Topic::query()->orderBy( 'slug' )->get(), $version );
+        try {
+            $current = Snapshot::current();
+
+            if ( ! $force && $current?->version === $version ) {
+                // Heal a snapshot directory or index left behind by an earlier, partly failed sync.
+                if ( ( $this->store->manifest()['version'] ?? null ) !== $version ) {
+                    $this->store->write( $this->loader->load( $archive ) );
+                }
+
+                if ( $this->index->version() !== $version ) {
+                    $this->index->rebuild( Topic::query()->orderBy( 'slug' )->get(), $version );
+                }
+
+                return new SyncResult( $version, false, unchanged: $current->topic_count );
             }
 
-            return new SyncResult( $version, false, unchanged: $current->topic_count );
+            $bundle = $this->loader->load( $archive );
+
+            // The database is the source of truth, so it is updated first; the
+            // on-disk snapshot and the index are rebuilt from it afterwards and
+            // are healed by the next sync if writing them fails.
+            $result = ( new Topic() )->getConnection()->transaction( fn (): SyncResult => $this->apply( $bundle ) );
+
+            $this->store->write( $bundle );
+            $this->index->rebuild( Topic::query()->orderBy( 'slug' )->get(), $version );
+        } catch ( SpecificationException $exception ) {
+            throw $exception;
+        } catch ( Throwable $exception ) {
+            throw new SyncFailedException( __( 'Could not apply the specification snapshot: :message', [
+                'message' => $exception->getMessage(),
+            ] ), previous: $exception );
         }
-
-        $bundle = $this->loader->load( $archive );
-
-        $this->store->write( $bundle );
-
-        $result = ( new Topic() )->getConnection()->transaction( fn (): SyncResult => $this->apply( $bundle ) );
-
-        $this->index->rebuild( Topic::query()->orderBy( 'slug' )->get(), $version );
 
         return $result;
     }

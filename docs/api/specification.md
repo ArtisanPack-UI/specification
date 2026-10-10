@@ -17,6 +17,7 @@ title: Specification Class
 | `report( iterable $results )` | `SpecReport` | Builds a four-tier report |
 | `render( Topic $topic, RenderSurface $surface = RenderSurface::Admin )` | `RenderedTopic` | Renders a topic with its attribution |
 | `mcp()` | `McpClient` | The MCP client (check `isEnabled()` first) |
+| `agentReadinessExperimentalEnabled()` | `bool` | Whether checks for experimental Agent Readiness topics should run (`artisanpack.specification.agent_readiness_experimental`) |
 
 ## CheckRegistry
 
@@ -24,7 +25,9 @@ title: Specification Class
 |--------|-------------|
 | `register( SpecCheck\|string $check )` | Registers one check; each class at most once |
 | `registerMany( iterable $checks )` | Registers several |
-| `all()` | Every check, including tagged services |
+| `all()` | Every usable check, including tagged services. Checks that can't be resolved or have an invalid slug are reported and set aside |
+| `invalid()` | `array<string, string>` of set-aside checks: the reason, keyed by class name |
+| `reject( string $class, Throwable $exception )` | Reports a check as unusable and sets it aside |
 | `forSlug( string $slug )` / `forCategory( string $category )` / `forScope( CheckScope $scope )` | Filtered lists |
 | `has( string $slug )` | Whether any check enforces the slug |
 | `slugs()` | Unique, sorted covered slugs |

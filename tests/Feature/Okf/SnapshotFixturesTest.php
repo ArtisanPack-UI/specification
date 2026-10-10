@@ -53,11 +53,11 @@ it( 'renders each fixture topic with its CC BY 4.0 attribution', function ( stri
     $admin       = specification()->render( $topic );
     $paid        = specification()->render( $topic, RenderSurface::Paid );
 
-    expect( $admin->toHtml() )->toStartWith( '<div class="spec-topic" data-spec-slug="' . $slug . '"><div class="spec-topic-body">' )
+    expect( $admin->toHtml() )->toStartWith( '<div class="spec-topic" lang="en" dir="ltr" data-spec-slug="' . $slug . '"><div class="spec-topic-body">' )
         ->and( $admin->toHtml() )->toEndWith( $attribution->toHtml() . '</div>' )
         ->and( $admin->toHtml() )->toContain( '<a href="' . $url . '">' )
         ->and( $admin->toMarkdown() )->toEndWith( "\n\n---\n\n" . $attribution->toMarkdown() )
-        ->and( $paid->toHtml() )->toStartWith( '<div class="spec-topic" data-spec-slug="' . $slug . '">' . $attribution->toHtml() )
+        ->and( $paid->toHtml() )->toStartWith( '<div class="spec-topic" lang="en" dir="ltr" data-spec-slug="' . $slug . '">' . $attribution->toHtml() )
         ->and( $paid->toMarkdown() )->toStartWith( $attribution->toMarkdown() . "\n\n---\n\n" )
         ->and( json_decode( (string) json_encode( $admin ), true )['attribution']['url'] )->toBe( $url )
         ->and( (string) $admin )->toBe( $admin->toHtml() );

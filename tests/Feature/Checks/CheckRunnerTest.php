@@ -57,6 +57,23 @@ it( 'turns a throwing check into an errored result', function (): void {
         ->and( $results[0]->details['exception'] )->toBe( RuntimeException::class );
 } );
 
+it( 'keeps running the other checks when one check is invalid', function (): void {
+    specification()
+        ->registerCheck( new StubCheck( 'Not A Slug' ) )
+        ->registerCheck( new class () extends StubCheck {
+            public function __construct()
+            {
+                parent::__construct( 'seo/meta-robots' );
+            }
+        } );
+
+    $results = specification()->run( SpecContext::page( 'https://example.test/' ) );
+
+    expect( $results )->toHaveCount( 1 )
+        ->and( $results[0]->slug )->toBe( 'seo/meta-robots' )
+        ->and( specification()->checks()->invalid() )->toHaveKey( StubCheck::class );
+} );
+
 it( 'rejects results reported for another slug', function (): void {
     specification()->registerCheck( new StubCheck( runner: fn ( SpecContext $context ): SpecResult => new SpecResult(
         'seo/other',

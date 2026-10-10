@@ -77,7 +77,8 @@ it( 'registers the weekly sync with the scheduler', function (): void {
 it( 'creates the topics and snapshots tables', function (): void {
     expect( Schema::hasTable( 'specification_topics' ) )->toBeTrue()
         ->and( Schema::hasTable( 'specification_snapshots' ) )->toBeTrue()
-        ->and( Schema::hasColumn( 'specification_snapshots', 'changes' ) )->toBeTrue();
+        ->and( Schema::hasColumn( 'specification_snapshots', 'changes' ) )->toBeTrue()
+        ->and( glob( __DIR__ . '/../../database/migrations/*.php' ) )->toHaveCount( 2 );
 } );
 
 it( 'registers the keystone artisan commands', function (): void {
@@ -91,4 +92,12 @@ it( 'publishes the config file under the specification-config tag', function ():
         ->and( array_key_first( $paths ) )->toEndWith( 'config/artisanpack/specification.php' )
         ->and( array_key_first( $paths ) )->toBeFile()
         ->and( reset( $paths ) )->toBe( config_path( 'artisanpack/specification.php' ) );
+} );
+
+it( 'keeps experimental agent readiness checks off unless enabled', function (): void {
+    expect( specification()->agentReadinessExperimentalEnabled() )->toBeFalse();
+
+    config()->set( 'artisanpack.specification.agent_readiness_experimental', true );
+
+    expect( specification()->agentReadinessExperimentalEnabled() )->toBeTrue();
 } );

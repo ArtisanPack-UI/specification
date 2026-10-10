@@ -56,6 +56,9 @@ it( 'fails pages without a valid leading doctype', function ( string $html, ?str
     'XHTML'                   => [ '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"><html></html>', '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN">', 'legacy doctype' ],
     'after markup'            => [ '<meta charset="utf-8"><!doctype html><html></html>', '<!doctype html>', 'not the first thing' ],
     'unclosed comment before' => [ '<!-- oops <!doctype html><html></html>', '<!doctype html>', 'not the first thing' ],
+    'only in a script'        => [ "<html><head><script>var t = '<!DOCTYPE html>';</script></head></html>", null, 'no doctype' ],
+    'only in a comment'       => [ '<html><!-- <!doctype html> --></html>', null, 'no doctype' ],
+    'only in a textarea'      => [ '<html><body><textarea><!doctype html></textarea></body></html>', null, 'no doctype' ],
 ] );
 
 it( 'skips pages without HTML', function ( ?string $html ): void {
@@ -86,10 +89,13 @@ it( 'describes and applies an autofix through the context writer', function ( st
     expect( $written )->toBe( $expected )
         ->and( ( new DoctypeCheck() )->run( doctypePage( $written ) )->outcome )->toBe( ResultOutcome::Passed );
 } )->with( [
-    'missing'   => [ '<html></html>', "<!doctype html>\n<html></html>", null ],
-    'legacy'    => [ "<!-- c -->\n<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\"><html></html>", "<!-- c -->\n<!doctype html><html></html>", '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN">' ],
-    'misplaced' => [ '<meta charset="utf-8"><!DOCTYPE html><html></html>', "<!doctype html>\n<meta charset=\"utf-8\"><html></html>", '<!DOCTYPE html>' ],
-    'keeps BOM' => [ "\u{FEFF}<html></html>", "\u{FEFF}<!doctype html>\n<html></html>", null ],
+    'missing'                  => [ '<html></html>', "<!doctype html>\n<html></html>", null ],
+    'legacy'                   => [ "<!-- c -->\n<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\"><html></html>", "<!-- c -->\n<!doctype html><html></html>", '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN">' ],
+    'misplaced'                => [ '<meta charset="utf-8"><!DOCTYPE html><html></html>', "<!doctype html>\n<meta charset=\"utf-8\"><html></html>", '<!DOCTYPE html>' ],
+    'keeps BOM'                => [ "\u{FEFF}<html></html>", "\u{FEFF}<!doctype html>\n<html></html>", null ],
+    'script'                   => [ "<html><head><script>var t = '<!DOCTYPE html>';</script></head></html>", "<!doctype html>\n<html><head><script>var t = '<!DOCTYPE html>';</script></head></html>", null ],
+    'comment'                  => [ '<html><!-- <!doctype html> --></html>', "<!doctype html>\n<html><!-- <!doctype html> --></html>", null ],
+    'misplaced after a script' => [ '<script>x("<!doctype html>")</script><!doctype html><html></html>', "<!doctype html>\n<script>x(\"<!doctype html>\")</script><html></html>", '<!doctype html>' ],
 ] );
 
 it( 'runs through the registry and runner once registered', function (): void {
@@ -105,4 +111,27 @@ it( 'runs through the registry and runner once registered', function (): void {
 
 it( 'is not registered by default', function (): void {
     expect( specification()->checks()->has( 'foundations/doctype' ) )->toBeFalse();
+} );
+
+it( 'errors without an autofix when the HTML cannot be scanned', function (): void {
+    $jit       = ini_get( 'pcre.jit' );
+    $backtrack = ini_get( 'pcre.backtrack_limit' );
+    ini_set( 'pcre.jit', '0' );
+    ini_set( 'pcre.backtrack_limit', '10' );
+
+    try {
+        $html    = '<html><head><script>' . str_repeat( 'var a = 1; ', 200 ) . '</script></head></html>';
+        $check   = new DoctypeCheck();
+        $context = doctypePage( $html, fn ( string $fixed ) => null );
+
+        $result = $check->run( $context );
+        $fix    = $check->autofix( $context );
+    } finally {
+        ini_set( 'pcre.jit', (string) $jit );
+        ini_set( 'pcre.backtrack_limit', (string) $backtrack );
+    }
+
+    expect( $result->outcome )->toBe( ResultOutcome::Errored )
+        ->and( $result->message )->toContain( 'could not be inspected' )
+        ->and( $fix )->toBeNull();
 } );

@@ -88,3 +88,41 @@ it( 'persists to a file on disk', function (): void {
 it( 'throws a package exception when the index cannot be opened', function (): void {
     ( new SqliteFtsIndex( '/dev/null/not-a-dir/index.sqlite' ) )->version();
 } )->throws( SearchIndexUnavailableException::class );
+
+it( 'uses WAL so searches can read while another connection rebuilds', function (): void {
+    $path   = $this->specificationStorage . '/index/wal.sqlite';
+    $writer = new SqliteFtsIndex( $path );
+    $writer->rebuild( ArtisanPackUI\Specification\Models\Topic::query()->get(), 'v1' );
+
+    $raw = new PDO( 'sqlite:' . $path );
+
+    expect( $raw->query( 'PRAGMA journal_mode' )->fetchColumn() )->toBe( 'wal' );
+
+    $raw->exec( 'BEGIN IMMEDIATE' );
+    $raw->exec( "INSERT INTO meta (key, value) VALUES ('probe', 'x')" );
+
+    expect( ( new SqliteFtsIndex( $path ) )->version() )->toBe( 'v1' );
+
+    $raw->exec( 'ROLLBACK' );
+} );
+
+it( 'keeps combining marks inside query tokens', function (): void {
+    $index = new SqliteFtsIndex( ':memory:' );
+
+    expect( $index->matchExpression( 'हिन्दी भाषा' ) )->toBe( '"हिन्दी"* "भाषा"*' )
+        ->and( $index->matchExpression( "cafe\u{0301} menu" ) )->toBe( "\"cafe\u{0301}\"* \"menu\"*" );
+
+    $topic = new ArtisanPackUI\Specification\Models\Topic( [
+        'slug'         => 'i18n/hindi',
+        'category'     => 'i18n',
+        'status'       => SpecStatus::Optional,
+        'resource_url' => 'https://specification.website/spec/i18n/hindi/',
+        'title'        => 'हिन्दी भाषा',
+        'summary'      => 'Summary',
+        'body_md'      => 'हिन्दी भाषा के लिए',
+    ] );
+
+    $index->rebuild( [ $topic ], 'v1' );
+
+    expect( $index->search( 'हिन्दी' ) )->toHaveCount( 1 );
+} );
