@@ -127,7 +127,7 @@ final class TopicParser
             trim( $meta['description'] ),
             $body,
             $this->sources( $meta['sources'] ?? [] ),
-            $this->resourceUrl( $slug, $meta['resource'] ?? null ),
+            Attribution::canonicalUrl( $slug, $meta['resource'] ?? null ),
             $this->timestamp( $meta['source_updated_at'] ?? null ),
         );
     }
@@ -162,7 +162,7 @@ final class TopicParser
                 }
             }
 
-            if ( isset( $entry['resource'] ) && ! $this->isHttpUrl( $entry['resource'] ) ) {
+            if ( isset( $entry['resource'] ) && ! Attribution::isHttpUrl( $entry['resource'] ) ) {
                 unset( $entry['resource'] );
             }
 
@@ -172,30 +172,6 @@ final class TopicParser
         }
 
         return $normalized;
-    }
-
-    /**
-     * Gets the canonical topic URL, falling back to one derived from the slug.
-     *
-     * Only URLs on the upstream origin are accepted, so attribution links can
-     * never point elsewhere.
-     *
-     * @since 1.0.0
-     *
-     * @param  string  $slug      The topic slug.
-     * @param  mixed   $resource  The front-matter `resource` value.
-     *
-     * @return string
-     */
-    private function resourceUrl( string $slug, mixed $resource ): string
-    {
-        $prefix = Attribution::SOURCE_URL . '/';
-
-        if ( is_string( $resource ) && str_starts_with( $resource, $prefix ) && $this->isHttpUrl( $resource ) ) {
-            return $resource;
-        }
-
-        return $prefix . 'spec/' . $slug . '/';
     }
 
     /**
@@ -222,20 +198,5 @@ final class TopicParser
         } catch ( Throwable ) {
             return null;
         }
-    }
-
-    /**
-     * Determines whether a value is an absolute http(s) URL.
-     *
-     * @since 1.0.0
-     *
-     * @param  string  $url  The value.
-     *
-     * @return bool
-     */
-    private function isHttpUrl( string $url ): bool
-    {
-        return false !== filter_var( $url, FILTER_VALIDATE_URL )
-            && in_array( strtolower( (string) parse_url( $url, PHP_URL_SCHEME ) ), [ 'http', 'https' ], true );
     }
 }

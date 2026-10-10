@@ -57,6 +57,13 @@ final class Attribution implements Arrayable
     public const LICENSE_URL = 'https://creativecommons.org/licenses/by/4.0/';
 
     /**
+     * Longest canonical URL accepted (the `resource_url` column length).
+     *
+     * @var int
+     */
+    public const MAX_URL_LENGTH = 512;
+
+    /**
      * Creates a new attribution.
      *
      * @since 1.0.0
@@ -82,6 +89,53 @@ final class Attribution implements Arrayable
     public static function forTopic( Topic $topic ): self
     {
         return new self( $topic->title, $topic->resource_url );
+    }
+
+    /**
+     * Gets a topic's canonical upstream URL.
+     *
+     * Returns the given URL only when it is an absolute https URL on the
+     * upstream origin (and fits the `resource_url` column); otherwise the URL
+     * is derived from the slug. Attribution links can therefore never point
+     * anywhere other than specification.website.
+     *
+     * @since 1.0.0
+     *
+     * @param  string  $slug  The topic slug, e.g. `foundations/doctype`.
+     * @param  mixed   $url   The candidate URL.
+     *
+     * @return string
+     */
+    public static function canonicalUrl( string $slug, mixed $url ): string
+    {
+        $prefix = self::SOURCE_URL . '/';
+
+        if (
+            is_string( $url )
+            && strlen( $url ) <= self::MAX_URL_LENGTH
+            && str_starts_with( $url, $prefix )
+            && false !== filter_var( $url, FILTER_VALIDATE_URL )
+            && 'specification.website' === strtolower( (string) parse_url( $url, PHP_URL_HOST ) )
+        ) {
+            return $url;
+        }
+
+        return $prefix . 'spec/' . $slug . '/';
+    }
+
+    /**
+     * Determines whether a URL is an absolute http(s) URL.
+     *
+     * @since 1.0.0
+     *
+     * @param  string  $url  The URL.
+     *
+     * @return bool
+     */
+    public static function isHttpUrl( string $url ): bool
+    {
+        return false !== filter_var( $url, FILTER_VALIDATE_URL )
+            && in_array( strtolower( (string) parse_url( $url, PHP_URL_SCHEME ) ), [ 'http', 'https' ], true );
     }
 
     /**
@@ -151,7 +205,7 @@ final class Attribution implements Arrayable
     public function toMarkdown(): string
     {
         return __( ':title from :source, licensed under :license.', [
-            'title'   => '“[' . $this->escapeMarkdown( $this->title ) . '](<' . $this->url . '>)”',
+            'title'   => '“' . $this->markdownLink( $this->url, $this->title ) . '”',
             'source'  => '[' . self::SOURCE_NAME . '](<' . self::SOURCE_URL . '>)',
             'license' => '[' . self::LICENSE_NAME . '](<' . self::LICENSE_URL . '>)',
         ] );
@@ -180,6 +234,9 @@ final class Attribution implements Arrayable
     /**
      * Builds an escaped anchor.
      *
+     * Only http(s) URLs are linked; anything else renders as plain text so
+     * schemes such as `javascript:` can never reach an href.
+     *
      * @since 1.0.0
      *
      * @param  string       $href  The URL.
@@ -190,9 +247,34 @@ final class Attribution implements Arrayable
      */
     private function link( string $href, string $text, ?string $rel = null ): string
     {
+        if ( ! self::isHttpUrl( $href ) ) {
+            return e( $text );
+        }
+
         $relAttribute = null === $rel ? '' : ' rel="' . e( $rel ) . '"';
 
         return '<a href="' . e( $href ) . '"' . $relAttribute . '>' . e( $text ) . '</a>';
+    }
+
+    /**
+     * Builds a Markdown link, or escaped text when the URL is not http(s).
+     *
+     * @since 1.0.0
+     *
+     * @param  string  $href  The URL.
+     * @param  string  $text  The link text.
+     *
+     * @return string
+     */
+    private function markdownLink( string $href, string $text ): string
+    {
+        $text = $this->escapeMarkdown( $text );
+
+        if ( ! self::isHttpUrl( $href ) ) {
+            return $text;
+        }
+
+        return '[' . $text . '](<' . (string) preg_replace( '/[<>\s]/', '', $href ) . '>)';
     }
 
     /**

@@ -65,4 +65,6 @@ $attribution->toMarkdown();
 $attribution->toText();
 ```
 
+Attribution output only links `http` and `https` URLs. Any other scheme (for example `javascript:`) is rendered as plain text. Use `Attribution::canonicalUrl( $slug, $url )` to normalize a URL from an untrusted source to the upstream origin.
+
 See [Attribution Requirements](Advanced-Attribution-Requirements) for what consumers must honour.

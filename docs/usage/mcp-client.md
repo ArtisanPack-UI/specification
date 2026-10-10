@@ -58,6 +58,8 @@ The upstream server uses bare slugs (`doctype`). The client normalizes every slu
 
 Topic summaries and Markdown from the MCP server are CC BY 4.0 text too. `McpTopic::attribution()` returns the `Attribution` to display alongside them, and `McpTopic::toArray()` leaves the Markdown body out.
 
+Topic URLs returned by the server are normalized with `Attribution::canonicalUrl()`. A missing URL, or one that isn't an `https://specification.website/` URL, is replaced with the URL derived from the topic slug, so attribution links always point at the upstream site.
+
 ## Errors
 
 Any transport failure, non-2xx response, JSON-RPC error, tool error (`isError`), or malformed payload throws `McpRequestException`. The URL must use `https`, redirects are not followed, and responses larger than `HttpMcpClient::MAX_RESPONSE_BYTES` (5 MB) are refused.

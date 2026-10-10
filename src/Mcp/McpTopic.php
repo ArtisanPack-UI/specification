@@ -44,7 +44,7 @@ final class McpTopic implements Arrayable
      * @param  SpecStatus            $status     The status tier.
      * @param  string                $title      The title.
      * @param  string                $summary    The one-sentence summary.
-     * @param  string                $url        The canonical specification.website URL.
+     * @param  string                $url        The canonical specification.website URL (origin-checked).
      * @param  string|null           $markdown   The full Markdown page (only from get_topic).
      * @param  CarbonImmutable|null  $updatedAt  When the topic was last updated upstream (only from get_topic).
      */
@@ -62,6 +62,10 @@ final class McpTopic implements Arrayable
 
     /**
      * Creates a topic from an MCP structured-content item.
+     *
+     * The `url` is normalized with Attribution::canonicalUrl(): a missing URL,
+     * or one that is not on the upstream origin, falls back to the URL
+     * derived from the slug, so attribution links stay on specification.website.
      *
      * @since 1.0.0
      *
@@ -84,13 +88,15 @@ final class McpTopic implements Arrayable
             ] ) );
         }
 
+        $localSlug = self::localSlug( $category, $slug );
+
         return new self(
-            self::localSlug( $category, $slug ),
+            $localSlug,
             $category,
             $status,
             self::string( $data, 'title' ),
             is_string( $data['summary'] ?? null ) ? $data['summary'] : '',
-            self::string( $data, 'url' ),
+            Attribution::canonicalUrl( $localSlug, $data['url'] ?? null ),
             is_string( $data['markdown'] ?? null ) ? $data['markdown'] : null,
             self::date( $data['updated'] ?? null ),
         );

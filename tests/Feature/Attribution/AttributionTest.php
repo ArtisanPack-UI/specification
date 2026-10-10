@@ -100,3 +100,27 @@ it( 'keeps the topic body out of model serialization', function (): void {
 it( 'renders through the entry point', function (): void {
     expect( specification()->render( doctypeTopic(), RenderSurface::Editor )->surface )->toBe( RenderSurface::Editor );
 } );
+
+it( 'never links a non-http(s) attribution URL', function ( string $url ): void {
+    $attribution = new Attribution( 'Title', $url );
+
+    expect( $attribution->toHtml() )->not->toContain( 'href="' . e( $url ) )
+        ->and( $attribution->toHtml() )->toContain( '“Title”' )
+        ->and( $attribution->toMarkdown() )->not->toContain( $url )
+        ->and( $attribution->toMarkdown() )->toStartWith( '“Title”' );
+} )->with( [
+    'javascript' => 'javascript:alert(1)',
+    'data'       => 'data:text/html,<script>alert(1)</script>',
+    'relative'   => '/spec/a/b/',
+] );
+
+it( 'keeps canonical upstream URLs and derives the rest from the slug', function ( mixed $url, string $expected ): void {
+    expect( Attribution::canonicalUrl( 'foundations/doctype', $url ) )->toBe( $expected );
+} )->with( [
+    'upstream'      => [ 'https://specification.website/spec/foundations/doctype/', 'https://specification.website/spec/foundations/doctype/' ],
+    'foreign host'  => [ 'https://evil.example/spec/foundations/doctype/', 'https://specification.website/spec/foundations/doctype/' ],
+    'look-alike'    => [ 'https://specification.website.evil.example/x', 'https://specification.website/spec/foundations/doctype/' ],
+    'javascript'    => [ 'javascript:alert(1)', 'https://specification.website/spec/foundations/doctype/' ],
+    'too long'      => [ 'https://specification.website/' . str_repeat( 'a', 600 ), 'https://specification.website/spec/foundations/doctype/' ],
+    'not a string'  => [ null, 'https://specification.website/spec/foundations/doctype/' ],
+] );

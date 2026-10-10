@@ -296,3 +296,15 @@ it( 'refuses oversized responses', function (): void {
 
     mcpClient()->listTopics();
 } )->throws( McpRequestException::class, 'exceeds the' );
+
+it( 'normalizes MCP topic URLs to the upstream origin', function ( mixed $url ): void {
+    $topic = ArtisanPackUI\Specification\Mcp\McpTopic::fromArray( upstreamDoctype( [ 'url' => $url ] ) );
+
+    expect( $topic->url )->toBe( 'https://specification.website/spec/foundations/doctype/' )
+        ->and( $topic->attribution()->toHtml() )->not->toContain( 'javascript:' )
+        ->and( $topic->attribution()->toHtml() )->not->toContain( 'evil.example' );
+} )->with( [
+    'javascript'   => 'javascript:alert(1)',
+    'foreign host' => 'https://evil.example/spec/foundations/doctype/',
+    'missing'      => null,
+] );
