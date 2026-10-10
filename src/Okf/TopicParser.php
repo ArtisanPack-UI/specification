@@ -40,7 +40,7 @@ final class TopicParser
      *
      * @var array<int, string>
      */
-    private const SOURCE_KEYS = [ 'id', 'title', 'resource', 'author' ];
+    private const SOURCE_KEYS = [ 'id', 'title', 'resource', 'author', 'mirror' ];
 
     /**
      * Splits a document into its front matter and body.

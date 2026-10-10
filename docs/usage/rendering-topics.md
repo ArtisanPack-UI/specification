@@ -35,6 +35,28 @@ A `RenderedTopic` can be output in several formats, and every one includes the a
 
 Topic Markdown comes from a third party. The renderer escapes raw HTML in it and drops unsafe link protocols such as `javascript:`.
 
+## Links
+
+OKF topic bodies link relative to the bundle and to the upstream site, which would break once the text is displayed on your site. The renderer makes every link absolute in both `toHtml()` and `toMarkdown()`:
+
+| Link in the topic body | Rendered as |
+|------------------------|-------------|
+| `../references/{source-id}.md` | The cited source's own URL (from the topic's `sources`) |
+| `/spec/security/hsts/`, `/llms.txt` | `https://specification.website/spec/security/hsts/`, `https://specification.website/llms.txt` |
+| `hsts.md`, `../security/hsts.md` | `https://specification.website/spec/security/hsts/` |
+| `https://…`, `mailto:…`, `#fragment` | Unchanged |
+
+A link that can't be resolved (an unknown reference, a path outside the bundle, or an unsafe scheme) is dropped and its text is kept. Code blocks and inline code are left alone. `TopicLinkResolver` does the resolving, and you can use it directly when you handle topic Markdown yourself:
+
+```php
+use ArtisanPackUI\Specification\Attribution\TopicLinkResolver;
+
+$links = TopicLinkResolver::forTopic( $topic );
+
+$links->resolve( '../references/html-living-standard-the-doctype.md' );
+$links->rewriteMarkdown( $markdown );
+```
+
 ## Surfaces
 
 The `RenderSurface` you pass tells the `LicenseGuard` where the text will appear:

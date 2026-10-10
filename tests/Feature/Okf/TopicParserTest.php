@@ -46,6 +46,7 @@ it( 'parses a fixture topic', function (): void {
             'title'    => 'HTML Living Standard — The DOCTYPE',
             'resource' => 'https://html.spec.whatwg.org/multipage/syntax.html#the-doctype',
             'author'   => 'WHATWG',
+            'mirror'   => '../references/html-living-standard-the-doctype.md',
         ] ] );
 } );
 

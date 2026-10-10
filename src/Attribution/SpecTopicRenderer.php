@@ -27,7 +27,8 @@ use League\CommonMark\MarkdownConverter;
  * Attribution is enforced here rather than by callers: a RenderedTopic always
  * carries its CC BY 4.0 attribution, and the LicenseGuard is consulted before
  * anything is produced. Topic Markdown comes from a third party, so raw HTML
- * in it is escaped and unsafe link protocols are dropped.
+ * in it is escaped, unsafe link protocols are dropped, and relative links
+ * are resolved to absolute upstream URLs.
  *
  * @since 1.0.0
  */
@@ -83,6 +84,7 @@ final class SpecTopicRenderer
             $this->guard->placement( $surface ),
             $surface,
             $this->converter,
+            TopicLinkResolver::forTopic( $topic ),
         );
     }
 }

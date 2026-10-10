@@ -44,6 +44,7 @@ All value objects are immutable.
 
 - `Attribution`: `forTopic()`, `canonical()`, `toText()`, `toHtml()`, `toMarkdown()`, `toArray()`, and the static helpers `canonicalUrl()` (normalizes a URL to the upstream origin) and `isHttpUrl()`. The constants `SOURCE_NAME`, `SOURCE_URL`, `LICENSE_NAME`, `LICENSE_URL`, and `MAX_URL_LENGTH` hold the fixed parts.
 - `RenderedTopic`: `toHtml()`, `toMarkdown()`, `toArray()`, `jsonSerialize()`, `__toString()`.
+- `TopicLinkResolver`: `forTopic()`, `resolve()` (returns the absolute URL, or `null` when the link should be dropped), `rewriteMarkdown()`.
 
 ## MCP
 

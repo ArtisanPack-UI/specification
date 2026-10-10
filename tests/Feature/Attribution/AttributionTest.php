@@ -124,3 +124,34 @@ it( 'keeps canonical upstream URLs and derives the rest from the slug', function
     'too long'      => [ 'https://specification.website/' . str_repeat( 'a', 600 ), 'https://specification.website/spec/foundations/doctype/' ],
     'not a string'  => [ null, 'https://specification.website/spec/foundations/doctype/' ],
 ] );
+
+it( 'resolves relative links in rendered topic bodies', function (): void {
+    $topic          = doctypeTopic();
+    $topic->body_md = '[standard](../references/html-living-standard-the-doctype.md) [hsts](/spec/security/hsts/) [sibling](html-lang.md) [gone](../references/unknown.md) ![img](/logo.png)';
+
+    $rendered = app( SpecTopicRenderer::class )->render( $topic );
+    $html     = $rendered->toHtml();
+
+    preg_match_all( '/(?:href|src)="([^"]+)"/', $html, $matches );
+
+    expect( $html )->toContain( 'href="https://html.spec.whatwg.org/multipage/syntax.html#the-doctype"' )
+        ->and( $html )->toContain( 'href="https://specification.website/spec/security/hsts/"' )
+        ->and( $html )->toContain( 'href="https://specification.website/spec/foundations/html-lang/"' )
+        ->and( $html )->toContain( 'src="https://specification.website/logo.png"' )
+        ->and( $html )->toContain( ' gone ' )
+        ->and( $html )->not->toContain( 'unknown.md' );
+
+    foreach ( $matches[1] as $url ) {
+        expect( $url )->toStartWith( 'https://' );
+    }
+
+    expect( $rendered->toMarkdown() )->not->toContain( '](../' )
+        ->and( $rendered->toMarkdown() )->not->toContain( '](/spec' )
+        ->and( $rendered->toMarkdown() )->toContain( '[standard](<https://html.spec.whatwg.org/multipage/syntax.html#the-doctype>)' );
+} );
+
+it( 'resolves the reference link in the synced fixture topic', function (): void {
+    expect( doctypeTopic()->render()->toHtml() )
+        ->toContain( 'href="https://html.spec.whatwg.org/multipage/syntax.html#the-doctype"' )
+        ->not->toContain( '../references/' );
+} );
