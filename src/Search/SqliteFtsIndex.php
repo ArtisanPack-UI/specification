@@ -41,6 +41,13 @@ final class SqliteFtsIndex implements SearchIndex
     private const MAX_TOKENS = 16;
 
     /**
+     * Seconds to wait for a lock held by another connection.
+     *
+     * @var int
+     */
+    private const BUSY_TIMEOUT_SECONDS = 5;
+
+    /**
      * The lazily opened connection.
      *
      * @var PDO|null
@@ -207,7 +214,17 @@ final class SqliteFtsIndex implements SearchIndex
                 mkdir( dirname( $this->path ), 0755, true );
             }
 
-            $pdo = new PDO( 'sqlite:' . $this->path, null, null, [ PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION ] );
+            $pdo = new PDO( 'sqlite:' . $this->path, null, null, [
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_TIMEOUT => self::BUSY_TIMEOUT_SECONDS,
+            ] );
+            $pdo->exec( 'PRAGMA busy_timeout = ' . ( self::BUSY_TIMEOUT_SECONDS * 1000 ) );
+
+            // WAL lets searches keep reading the previous index while a rebuild writes.
+            if ( ':memory:' !== $this->path ) {
+                $pdo->exec( 'PRAGMA journal_mode = WAL' );
+            }
+
             $pdo->exec( "CREATE VIRTUAL TABLE IF NOT EXISTS topics USING fts5(slug UNINDEXED, category UNINDEXED, status UNINDEXED, resource_url UNINDEXED, title, summary, body, tokenize = 'porter unicode61')" );
             $pdo->exec( 'CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)' );
         } catch ( Throwable $exception ) {

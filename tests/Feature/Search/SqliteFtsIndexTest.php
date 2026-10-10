@@ -88,3 +88,20 @@ it( 'persists to a file on disk', function (): void {
 it( 'throws a package exception when the index cannot be opened', function (): void {
     ( new SqliteFtsIndex( '/dev/null/not-a-dir/index.sqlite' ) )->version();
 } )->throws( SearchIndexUnavailableException::class );
+
+it( 'uses WAL so searches can read while another connection rebuilds', function (): void {
+    $path   = $this->specificationStorage . '/index/wal.sqlite';
+    $writer = new SqliteFtsIndex( $path );
+    $writer->rebuild( ArtisanPackUI\Specification\Models\Topic::query()->get(), 'v1' );
+
+    $raw = new PDO( 'sqlite:' . $path );
+
+    expect( $raw->query( 'PRAGMA journal_mode' )->fetchColumn() )->toBe( 'wal' );
+
+    $raw->exec( 'BEGIN IMMEDIATE' );
+    $raw->exec( "INSERT INTO meta (key, value) VALUES ('probe', 'x')" );
+
+    expect( ( new SqliteFtsIndex( $path ) )->version() )->toBe( 'v1' );
+
+    $raw->exec( 'ROLLBACK' );
+} );
