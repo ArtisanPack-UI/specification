@@ -20,14 +20,77 @@ return [
     |--------------------------------------------------------------------------
     |
     | The upstream OKF bundle published by specification.website, and where
-    | the vendored snapshot is extracted on disk (relative to storage_path()).
-    | The snapshot keeps checks functional offline.
+    | the vendored snapshot is extracted on disk (relative to storage_path()
+    | unless absolute). The snapshot keeps checks functional offline.
+    |
+    | The size limits guard against oversized or decompression-bomb archives.
     |
     */
 
     'okf' => [
-        'url'           => env( 'SPECIFICATION_OKF_URL', 'https://specification.website/okf.tar.gz' ),
-        'snapshot_path' => env( 'SPECIFICATION_SNAPSHOT_PATH', 'artisanpack/specification/snapshot' ),
+        'url'                 => env( 'SPECIFICATION_OKF_URL', 'https://specification.website/okf.tar.gz' ),
+        'snapshot_path'       => env( 'SPECIFICATION_SNAPSHOT_PATH', 'artisanpack/specification/snapshot' ),
+        'timeout'             => (int) env( 'SPECIFICATION_OKF_TIMEOUT', 30 ),
+        'max_archive_bytes'   => 10 * 1024 * 1024,
+        'max_extracted_bytes' => 50 * 1024 * 1024,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Scheduled Sync
+    |--------------------------------------------------------------------------
+    |
+    | When enabled, the package registers a weekly sync with the Laravel
+    | scheduler. On-demand syncs are always available via specification()->sync().
+    |
+    */
+
+    'sync' => [
+        'scheduled' => (bool) env( 'SPECIFICATION_SYNC_SCHEDULED', true ),
+        'cron'      => env( 'SPECIFICATION_SYNC_CRON', '0 3 * * 0' ),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Local Search Index
+    |--------------------------------------------------------------------------
+    |
+    | The embedded SQLite FTS5 index file (relative to storage_path() unless
+    | absolute). It is independent of the application's database connection.
+    |
+    */
+
+    'index' => [
+        'path' => env( 'SPECIFICATION_INDEX_PATH', 'artisanpack/specification/index.sqlite' ),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | SpecCheck Registrations
+    |--------------------------------------------------------------------------
+    |
+    | Application-level SpecCheck classes. Packages register their checks from
+    | their own service providers via the CheckRegistry, or by tagging them
+    | with `artisanpack.specification.checks`.
+    |
+    */
+
+    'checks' => [],
+
+    /*
+    |--------------------------------------------------------------------------
+    | License Guard (CC BY 4.0)
+    |--------------------------------------------------------------------------
+    |
+    | Topic text is CC BY 4.0. It may never be rendered on a blocked surface,
+    | and on prominent surfaces the attribution is placed before the body
+    | rather than after it. Values are RenderSurface enum values.
+    |
+    */
+
+    'license' => [
+        'blocked_surfaces'   => [ 'marketing' ],
+        'prominent_surfaces' => [ 'paid' ],
     ],
 
     /*
