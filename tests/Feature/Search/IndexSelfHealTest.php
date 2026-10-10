@@ -74,3 +74,29 @@ it( 'searches without a rebuild before any sync has run', function (): void {
     expect( specification()->search( 'quirks' ) )->toBe( [] )
         ->and( $index->version() )->toBeNull();
 } );
+
+it( 'waits for a rebuild running elsewhere, then rebuilds if still stale', function (): void {
+    specification()->sync( archivePath: writeOkfArchive( okfArchive() ) );
+    $index = useFreshIndex( new SqliteFtsIndex( ':memory:' ) );
+
+    $held = Illuminate\Support\Facades\Cache::lock( Specification::INDEX_LOCK_NAME, 60 );
+    $held->get();
+
+    Illuminate\Support\Sleep::fake( syncWithCarbon: true );
+    Illuminate\Support\Sleep::whenFakingSleep( fn () => $held->release() );
+
+    expect( specification()->search( 'quirks' ) )->toHaveCount( 1 )
+        ->and( $index->version() )->toBe( Snapshot::current()->version );
+} );
+
+it( 'fails instead of searching an unverified index when the rebuild lock is held too long', function (): void {
+    specification()->sync( archivePath: writeOkfArchive( okfArchive() ) );
+    $index = useFreshIndex( new SqliteFtsIndex( ':memory:' ) );
+
+    Illuminate\Support\Facades\Cache::lock( Specification::INDEX_LOCK_NAME, 60 )->get();
+    Illuminate\Support\Sleep::fake( syncWithCarbon: true );
+
+    expect( fn () => specification()->search( 'quirks' ) )
+        ->toThrow( ArtisanPackUI\Specification\Exceptions\SearchIndexUnavailableException::class, 'being rebuilt' )
+        ->and( $index->version() )->toBeNull();
+} );

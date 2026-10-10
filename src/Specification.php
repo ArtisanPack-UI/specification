@@ -27,6 +27,7 @@ use ArtisanPackUI\Specification\Contracts\SearchIndex;
 use ArtisanPackUI\Specification\Contracts\SpecCheck;
 use ArtisanPackUI\Specification\Enums\RenderSurface;
 use ArtisanPackUI\Specification\Enums\SpecStatus;
+use ArtisanPackUI\Specification\Exceptions\SearchIndexUnavailableException;
 use ArtisanPackUI\Specification\Models\Snapshot;
 use ArtisanPackUI\Specification\Models\Topic;
 use ArtisanPackUI\Specification\Okf\Synchronizer;
@@ -34,6 +35,7 @@ use ArtisanPackUI\Specification\Okf\SyncResult;
 use ArtisanPackUI\Specification\Reporting\SpecReport;
 use ArtisanPackUI\Specification\Search\SearchHit;
 use Illuminate\Contracts\Cache\LockProvider;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Database\QueryException;
 
@@ -56,6 +58,13 @@ class Specification
      * @var string
      */
     public const INDEX_LOCK_NAME = 'artisanpack-specification-index-rebuild';
+
+    /**
+     * Seconds to wait for another request's index rebuild before giving up.
+     *
+     * @var int
+     */
+    public const INDEX_LOCK_WAIT_SECONDS = 10;
 
     /**
      * The snapshot version the local index was last confirmed to match.
@@ -117,6 +126,8 @@ class Specification
      * @param  int              $limit     Maximum hits.
      * @param  string|null      $category  Limit to a category.
      * @param  SpecStatus|null  $status    Limit to a status tier.
+     *
+     * @throws SearchIndexUnavailableException When the index cannot be opened, rebuilt, or queried.
      *
      * @return array<int, SearchHit>
      */
@@ -249,7 +260,13 @@ class Specification
     /**
      * Rebuilds the local index from the topic rows when it is stale.
      *
+     * Waits up to INDEX_LOCK_WAIT_SECONDS for a rebuild running elsewhere,
+     * then re-checks the version, so a search never runs against an index
+     * that has not been confirmed current.
+     *
      * @since 1.0.0
+     *
+     * @throws SearchIndexUnavailableException When another rebuild holds the lock for too long.
      *
      * @return void
      */
@@ -269,8 +286,10 @@ class Specification
             $store = $this->cache->getStore();
             $lock  = $store instanceof LockProvider ? $store->lock( self::INDEX_LOCK_NAME, 60 ) : null;
 
-            if ( null !== $lock && ! $lock->get() ) {
-                return;
+            try {
+                $lock?->block( self::INDEX_LOCK_WAIT_SECONDS );
+            } catch ( LockTimeoutException $exception ) {
+                throw new SearchIndexUnavailableException( __( 'The search index is being rebuilt by another process; try again shortly.' ), previous: $exception );
             }
 
             try {

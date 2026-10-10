@@ -30,7 +30,7 @@ The archive downloaded but none of its topics parsed. The existing snapshot and 
 
 ### SearchIndexUnavailableException
 
-The SQLite index file could not be opened, or your SQLite build lacks FTS5. Check that `ext-pdo_sqlite` is installed, that the directory for `artisanpack.specification.index.path` is writable, and that `SELECT sqlite_compileoption_used('ENABLE_FTS5')` returns `1`.
+The SQLite index file could not be opened, your SQLite build lacks FTS5, or (with the message "being rebuilt by another process") another request held the index rebuild lock for longer than 10 seconds. That last case is transient, so retry the search. Check that `ext-pdo_sqlite` is installed, that the directory for `artisanpack.specification.index.path` is writable, and that `SELECT sqlite_compileoption_used('ENABLE_FTS5')` returns `1`.
 
 ### Search returns nothing after a sync
 
@@ -38,7 +38,7 @@ The SQLite index file could not be opened, or your SQLite build lacks FTS5. Chec
 
 ## Multi-server Deployments
 
-Topic and snapshot rows live in your shared database, but the search index and the vendored snapshot are files under `storage_path()` on each server. The scheduled sync runs on one server only. On every other server (and after a deploy to a fresh or ephemeral filesystem) the first `search()` call finds that the local index doesn't match the current snapshot and rebuilds it from the database, under a short cache lock so concurrent requests don't all rebuild at once. The cache lock only coordinates requests that share a cache store.
+Topic and snapshot rows live in your shared database, but the search index and the vendored snapshot are files under `storage_path()` on each server. The scheduled sync runs on one server only. On every other server (and after a deploy to a fresh or ephemeral filesystem) the first `search()` call finds that the local index doesn't match the current snapshot and rebuilds it from the database, under a short cache lock so concurrent requests don't all rebuild at once. A request that finds another rebuild in progress waits up to 10 seconds (`Specification::INDEX_LOCK_WAIT_SECONDS`). It never searches an index it hasn't confirmed is current, so if the wait runs out it throws `SearchIndexUnavailableException` ("The search index is being rebuilt by another process"). The cache lock only coordinates requests that share a cache store.
 
 Keep `artisanpack.specification.index.path` (`SPECIFICATION_INDEX_PATH`) on each server's local disk. The index uses SQLite's WAL mode, so searches keep reading while a rebuild writes, and WAL isn't safe on network filesystems such as NFS or EFS. The on-disk snapshot is only an offline copy of the archive. Nothing reads it at request time, so it doesn't need to be shared either.
 
