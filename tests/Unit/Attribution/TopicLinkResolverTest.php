@@ -40,6 +40,12 @@ it( 'resolves link destinations to absolute URLs', function ( string $url, ?stri
     'javascript'              => [ 'javascript:alert(1)', null ],
     'data'                    => [ 'data:text/html,hi', null ],
     'empty'                   => [ '', null ],
+    'angle brackets in hash'  => [ '/spec/security/hsts/#x<bar>', 'https://specification.website/spec/security/hsts/#x%3Cbar%3E' ],
+    'quote in sibling hash'   => [ 'html-lang.md#a"b', 'https://specification.website/spec/foundations/html-lang/#a%22b' ],
+    'reference with hash'     => [ '../references/html-living-standard-the-doctype.md#x<y', 'https://html.spec.whatwg.org/multipage/syntax.html#the-doctype#x%3Cy' ],
+    'angle bracket in path'   => [ '/a<b', 'https://specification.website/a%3Cb' ],
+    'existing escape kept'    => [ '/a%20b#c%3Cd', 'https://specification.website/a%20b#c%3Cd' ],
+    'stray percent encoded'   => [ '/a%zz', 'https://specification.website/a%25zz' ],
 ] );
 
 it( 'rewrites Markdown links outside code', function (): void {
@@ -73,4 +79,14 @@ it( 'rewrites Markdown links outside code', function (): void {
 it( 'rewrites Markdown links whose text contains code spans', function (): void {
     expect( doctypeLinkResolver()->rewriteMarkdown( 'Mark the rest [`inert`](/spec/accessibility/inert-attribute/) and see [`/llms.txt`](/llms.txt).' ) )
         ->toBe( 'Mark the rest [`inert`](<https://specification.website/spec/accessibility/inert-attribute/>) and see [`/llms.txt`](<https://specification.website/llms.txt>).' );
+} );
+
+it( 'keeps rewritten reference definitions valid when the destination has angle brackets', function (): void {
+    expect( doctypeLinkResolver()->rewriteMarkdown( '[ref]: /spec/security/hsts/#x<bar>' ) )
+        ->toBe( '[ref]: <https://specification.website/spec/security/hsts/#x%3Cbar%3E>' );
+} );
+
+it( 'rewrites inline links whose destination contains angle brackets', function (): void {
+    expect( doctypeLinkResolver()->rewriteMarkdown( 'See [a](/spec/security/hsts/#x<bar>) and [b](</spec/a b/>).' ) )
+        ->toBe( 'See [a](<https://specification.website/spec/security/hsts/#x%3Cbar%3E>) and [b](<https://specification.website/spec/a%20b/>).' );
 } );

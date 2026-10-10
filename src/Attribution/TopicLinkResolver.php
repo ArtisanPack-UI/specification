@@ -94,6 +94,10 @@ final class TopicLinkResolver
     /**
      * Resolves a link destination.
      *
+     * Characters that are not allowed in a URL (such as `<`, `>`, or `"`)
+     * are percent-encoded in the result, so it is always safe to place in a
+     * Markdown destination or an HTML attribute.
+     *
      * @since 1.0.0
      *
      * @param  string  $url  The destination as written in the topic body.
@@ -101,6 +105,65 @@ final class TopicLinkResolver
      * @return string|null The absolute URL, or null when the link should be dropped.
      */
     public function resolve( string $url ): ?string
+    {
+        $resolved = $this->resolveUnencoded( $url );
+
+        return null === $resolved ? null : $this->encode( $resolved );
+    }
+
+    /**
+     * Rewrites the link and image destinations in Markdown source.
+     *
+     * Inline links (`[text](url)`, `![alt](url)`) and link reference
+     * definitions are rewritten; fenced code blocks and inline code spans are
+     * left untouched. A link that cannot be resolved is replaced by its text.
+     *
+     * @since 1.0.0
+     *
+     * @param  string  $markdown  The Markdown source.
+     *
+     * @return string
+     */
+    public function rewriteMarkdown( string $markdown ): string
+    {
+        $lines = preg_split( '/(\r?\n)/', $markdown, -1, PREG_SPLIT_DELIM_CAPTURE ) ?: [];
+        $fence = null;
+
+        foreach ( $lines as $index => $line ) {
+            if ( 1 === $index % 2 ) {
+                continue;
+            }
+
+            if ( 1 === preg_match( '/^ {0,3}(`{3,}|~{3,})/', $line, $matches ) ) {
+                if ( null === $fence ) {
+                    $fence = $matches[1];
+                } elseif ( $matches[1][0] === $fence[0] && strlen( $matches[1] ) >= strlen( $fence ) ) {
+                    $fence = null;
+                }
+
+                continue;
+            }
+
+            if ( null !== $fence || 1 === preg_match( '/^(?: {4}|\t)/', $line ) ) {
+                continue;
+            }
+
+            $lines[ $index ] = $this->rewriteMarkdownLine( $line );
+        }
+
+        return implode( '', $lines );
+    }
+
+    /**
+     * Resolves a link destination without encoding the result.
+     *
+     * @since 1.0.0
+     *
+     * @param  string  $url  The destination as written in the topic body.
+     *
+     * @return string|null
+     */
+    private function resolveUnencoded( string $url ): ?string
     {
         $url = trim( $url );
 
@@ -149,49 +212,6 @@ final class TopicLinkResolver
     }
 
     /**
-     * Rewrites the link and image destinations in Markdown source.
-     *
-     * Inline links (`[text](url)`, `![alt](url)`) and link reference
-     * definitions are rewritten; fenced code blocks and inline code spans are
-     * left untouched. A link that cannot be resolved is replaced by its text.
-     *
-     * @since 1.0.0
-     *
-     * @param  string  $markdown  The Markdown source.
-     *
-     * @return string
-     */
-    public function rewriteMarkdown( string $markdown ): string
-    {
-        $lines = preg_split( '/(\r?\n)/', $markdown, -1, PREG_SPLIT_DELIM_CAPTURE ) ?: [];
-        $fence = null;
-
-        foreach ( $lines as $index => $line ) {
-            if ( 1 === $index % 2 ) {
-                continue;
-            }
-
-            if ( 1 === preg_match( '/^ {0,3}(`{3,}|~{3,})/', $line, $matches ) ) {
-                if ( null === $fence ) {
-                    $fence = $matches[1];
-                } elseif ( $matches[1][0] === $fence[0] && strlen( $matches[1] ) >= strlen( $fence ) ) {
-                    $fence = null;
-                }
-
-                continue;
-            }
-
-            if ( null !== $fence || 1 === preg_match( '/^(?: {4}|\t)/', $line ) ) {
-                continue;
-            }
-
-            $lines[ $index ] = $this->rewriteMarkdownLine( $line );
-        }
-
-        return implode( '', $lines );
-    }
-
-    /**
      * Rewrites the links on one Markdown line, skipping inline code spans.
      *
      * @since 1.0.0
@@ -202,22 +222,23 @@ final class TopicLinkResolver
      */
     private function rewriteMarkdownLine( string $line ): string
     {
-        if ( 1 === preg_match( '/^( {0,3}\[[^\]]+\]:\s*)<?([^\s>]+)>?(.*)$/', $line, $matches ) ) {
-            $resolved = $this->resolve( $matches[2] );
+        // A destination is either <angle-bracketed> or runs to the next space.
+        if ( 1 === preg_match( '/^( {0,3}\[[^\]]+\]:\s*)(?:<([^>]*)>|(\S+))(.*)$/', $line, $matches ) ) {
+            $resolved = $this->resolve( '' !== $matches[2] ? $matches[2] : $matches[3] );
 
-            return null === $resolved ? '' : $matches[1] . '<' . $resolved . '>' . $matches[3];
+            return null === $resolved ? '' : $matches[1] . '<' . $resolved . '>' . $matches[4];
         }
 
         // Code spans are matched first and returned untouched; a link whose
         // text contains a code span starts at its `[` and so still matches.
         return (string) preg_replace_callback(
-            '/(?<code>(?<ticks>`+)(?:(?!\k<ticks>).)+?\k<ticks>)|(?<bang>!?)\[(?<text>(?:[^\[\]]|\[[^\[\]]*\])*)\]\(\s*<?(?<url>(?:[^\s()<>]|\([^\s()]*\))*)>?(?<title>(?:\s+"[^"]*")?)\s*\)/',
+            '/(?<code>(?<ticks>`+)(?:(?!\k<ticks>).)+?\k<ticks>)|(?<bang>!?)\[(?<text>(?:[^\[\]]|\[[^\[\]]*\])*)\]\(\s*(?:<(?<bracketed>[^>\n]*)>|(?<url>(?:[^\s()]|\([^\s()]*\))*))(?<title>(?:\s+"[^"]*")?)\s*\)/',
             function ( array $match ): string {
                 if ( '' !== ( $match['code'] ?? '' ) ) {
                     return $match[0];
                 }
 
-                $resolved = $this->resolve( $match['url'] );
+                $resolved = $this->resolve( '' !== ( $match['bracketed'] ?? '' ) ? $match['bracketed'] : $match['url'] );
 
                 if ( null === $resolved ) {
                     return $match['text'];
@@ -230,7 +251,27 @@ final class TopicLinkResolver
     }
 
     /**
-     * Returns the URL when its scheme is allowed.
+     * Percent-encodes every character RFC 3986 does not allow in a URL.
+     *
+     * Existing percent-escapes are kept, so encoding is idempotent.
+     *
+     * @since 1.0.0
+     *
+     * @param  string  $url  The URL.
+     *
+     * @return string
+     */
+    private function encode( string $url ): string
+    {
+        return (string) preg_replace_callback(
+            "/%(?![0-9A-Fa-f]{2})|[^A-Za-z0-9\\-._~:\\/?#\\[\\]@!$&'()*+,;=%]/",
+            static fn ( array $character ): string => rawurlencode( $character[0] ),
+            $url,
+        );
+    }
+
+    /**
+     * Returns the encoded URL when its scheme is allowed and it is valid.
      *
      * @since 1.0.0
      *
@@ -240,6 +281,7 @@ final class TopicLinkResolver
      */
     private function safe( string $url ): ?string
     {
+        $url    = $this->encode( $url );
         $scheme = strtolower( (string) parse_url( $url, PHP_URL_SCHEME ) );
 
         if ( ! in_array( $scheme, self::SAFE_SCHEMES, true ) ) {
