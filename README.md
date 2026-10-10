@@ -85,7 +85,7 @@ An optional client for the [specification.website MCP server](https://mcp.specif
 
 Specification content is © The Website Specification contributors and licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). This package's code is MIT licensed.
 
-Anywhere you display topic text, you must credit the topic title and The Website Specification, link to the topic, and name and link the license. The package enforces this at the renderer boundary: render topic bodies through `specification()->render()`, never by echoing `body_md`. Marketing surfaces are blocked, and paid surfaces put the attribution first. See [Attribution Requirements](docs/advanced/attribution-requirements.md).
+Anywhere you display topic text, you must credit the topic title and The Website Specification, link to the topic, and name and link the license. Render topic bodies through `specification()->render()`, which always attaches the attribution. Echoing `body_md` directly bypasses it. Marketing surfaces are blocked, and paid surfaces put the attribution first. See [Attribution Requirements](docs/advanced/attribution-requirements.md).
 
 ## Documentation
 

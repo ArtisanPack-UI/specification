@@ -50,7 +50,7 @@ The package owns OKF ingestion, the local search index, the `SpecCheck` contract
 - **Local search**: An embedded SQLite FTS5 index keeps topic lookups fast and working offline.
 - **SpecCheck registry**: A single contract (`SpecCheck`) that owner packages implement and register, with discovery from service providers, config, and container tags.
 - **Result aggregation**: `SpecReport` scores the four tiers (Required, Recommended, Optional, Avoid) separately for the site, each category, and each page. It never produces a single "overall %".
-- **CC BY 4.0 enforcement**: Topic text can only be rendered through `SpecTopicRenderer`, which always attaches attribution and refuses blocked surfaces.
+- **CC BY 4.0 attribution**: `SpecTopicRenderer` is the supported way to output topic text. It always attaches attribution and refuses blocked surfaces.
 - **MCP client**: An optional client for the specification.website MCP server, used to check upstream freshness. It is off by default, so the package runs snapshot-only.
 - **Artisan commands**: `keystone:spec-sync`, `keystone:spec-diff`, and `keystone:spec-check`.
 

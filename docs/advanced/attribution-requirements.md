@@ -24,7 +24,10 @@ The `Attribution` class produces all four required elements:
 
 ## How the Package Enforces It
 
-- **At the renderer boundary.** `SpecTopicRenderer` is the only way to output a topic body, and every `RenderedTopic` format (HTML, Markdown, array, JSON, string cast) includes the attribution. See [Rendering Topics](Usage-Rendering-Topics).
+- **At the renderer boundary.** `SpecTopicRenderer` (via `specification()->render()` or `Topic::render()`) is the supported, attribution-safe way to output a topic body. Every `RenderedTopic` format (HTML, Markdown, array, JSON, string cast) includes the attribution. See [Rendering Topics](Usage-Rendering-Topics).
+
+> **Warning:** The package cannot stop code from reading `Topic::$body_md` (or `McpTopic::$markdown`) and printing it directly. That bypasses the renderer and outputs the text **without attribution**. If you do it, you are responsible for adding the attribution yourself.
+
 - **In serialization.** `Topic::$body_md` is hidden from `toArray()`/`toJson()`, and `McpTopic::toArray()` leaves out the Markdown and includes the attribution.
 - **Per row.** Each topic row stores its canonical attribution string in the `attribution` column.
 - **By surface.** The `LicenseGuard` blocks rendering on `marketing` surfaces and places attribution first on `paid` surfaces. You can configure both lists under `artisanpack.specification.license`.

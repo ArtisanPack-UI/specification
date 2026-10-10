@@ -80,7 +80,9 @@ Messages are for people, so translate them. `details` is for UIs and agents, so 
 
 ### 4. Offer an autofix only when you can apply it
 
-A check knows *what* to change but rarely *where* it lives. The reference check asks the caller to pass a writer in the context data, and returns `null` without one:
+A check knows *what* to change but rarely *where* it lives. The reference check asks the caller to pass a writer in the context data, and returns `null` without one. Reusing `run()` keeps the "is it already passing?" logic in one place.
+
+This simplified version handles only a missing doctype. The real `DoctypeCheck` also replaces legacy doctypes and moves misplaced ones.
 
 ```php
     public const HTML_WRITER = 'html_writer';
@@ -89,11 +91,11 @@ A check knows *what* to change but rarely *where* it lives. The reference check 
     {
         $writer = $context->get( self::HTML_WRITER );
 
-        if ( ! is_callable( $writer ) || /* already passing */ ) {
+        if ( ! is_callable( $writer ) || null === $context->html || $this->run( $context )->isMet() ) {
             return null;
         }
 
-        $fixed = /* corrected HTML */;
+        $fixed = '<!doctype html>' . "\n" . $context->html;
 
         return new SpecFix(
             self::SLUG,

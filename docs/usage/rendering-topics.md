@@ -4,7 +4,9 @@ title: Rendering Topics
 
 # Rendering Topics
 
-Topic text is © The Website Specification contributors under CC BY 4.0. The package enforces attribution at the renderer boundary. A rendered topic always carries its attribution, and there is no accessor that returns the body on its own.
+Topic text is © The Website Specification contributors under CC BY 4.0. The renderer is the supported, attribution-safe way to output it. A rendered topic always carries its attribution, and `RenderedTopic` has no accessor that returns the body on its own.
+
+> **Warning:** `Topic::$body_md` is still readable as a model attribute. Printing it directly bypasses the renderer and outputs the text without attribution, so don't.
 
 ## Rendering
 
