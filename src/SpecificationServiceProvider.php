@@ -84,7 +84,10 @@ class SpecificationServiceProvider extends ServiceProvider
             (array) $this->config( 'license.blocked_surfaces', [] ),
             (array) $this->config( 'license.prominent_surfaces', [] ),
         ) );
-        $this->app->singleton( SpecTopicRenderer::class );
+        $this->app->singleton( SpecTopicRenderer::class, fn ( Application $app ): SpecTopicRenderer => new SpecTopicRenderer(
+            $app->make( LicenseGuard::class ),
+            (int) $this->config( 'render.heading_offset', 1 ),
+        ) );
 
         $this->app->singleton( SearchIndex::class, fn (): SearchIndex => new SqliteFtsIndex(
             $this->storagePath( (string) $this->config( 'index.path' ) ),

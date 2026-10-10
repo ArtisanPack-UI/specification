@@ -80,6 +80,16 @@ Values are `RenderSurface` enum values (`admin`, `editor`, `agent`, `public`, `p
 
 The MCP client is disabled by default, and the package then runs snapshot-only. Set `SPECIFICATION_MCP_ENABLED=true` to let `keystone:spec-diff` ask the upstream server what changed since your last sync. See [MCP Client](Usage-Mcp-Client).
 
+## Topic Rendering
+
+```php
+'render' => [
+    'heading_offset' => (int) env( 'SPECIFICATION_RENDER_HEADING_OFFSET', 1 ),
+],
+```
+
+Topic bodies start with a `#` title. In HTML output their headings are demoted by this many levels (0–5) so a rendered topic doesn't add another `<h1>` to your page. Set it to `0` to keep the original levels.
+
 ## Experimental Agent Readiness Topics
 
 ```php

@@ -23,7 +23,7 @@ A `RenderedTopic` can be output in several formats, and every one includes the a
 
 | Method | Output |
 |--------|--------|
-| `toHtml()` / `(string)` | `<div class="spec-topic" data-spec-slug="…">` containing the body HTML and a `<p class="spec-attribution">` |
+| `toHtml()` / `(string)` | `<div class="spec-topic" lang="en" dir="ltr" data-spec-slug="…">` containing the body HTML and a `<p class="spec-attribution">` |
 | `toMarkdown()` | Body and attribution separated by `---` |
 | `toArray()` / `json_encode()` | `slug`, `surface`, `placement`, `body_md`, and the attribution fields |
 
@@ -34,6 +34,12 @@ A `RenderedTopic` can be output in several formats, and every one includes the a
 ```
 
 Topic Markdown comes from a third party. The renderer escapes raw HTML in it and drops unsafe link protocols such as `javascript:`.
+
+## Headings and Language
+
+Every topic body starts with a `#` title. In HTML output, body headings are demoted by `artisanpack.specification.render.heading_offset` levels (default `1`, so the title becomes an `<h2>`) to keep your page's heading outline intact. Set it to `0` to keep the original levels. Markdown output is unchanged.
+
+The wrapper carries `lang="en"` and `dir="ltr"` because topic text is English, so screen readers pronounce it correctly in a localized app.
 
 ## Links
 

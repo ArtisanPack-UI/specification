@@ -80,6 +80,9 @@ final class RenderedTopic implements Arrayable, Htmlable, JsonSerializable, Stri
     /**
      * Gets the body and attribution as HTML.
      *
+     * The wrapper is marked `lang="en"` because topic text is English,
+     * whatever the host application's locale.
+     *
      * @since 1.0.0
      *
      * @return string
@@ -94,7 +97,7 @@ final class RenderedTopic implements Arrayable, Htmlable, JsonSerializable, Stri
         $body        = '<div class="spec-topic-body">' . ( new HtmlRenderer( $environment ) )->renderDocument( $document )->getContent() . '</div>';
         $attribution = $this->attribution->toHtml();
 
-        return '<div class="spec-topic" data-spec-slug="' . e( $this->slug ) . '">'
+        return '<div class="spec-topic" lang="en" dir="ltr" data-spec-slug="' . e( $this->slug ) . '">'
             . $this->arrange( $body, $attribution, '' )
             . '</div>';
     }

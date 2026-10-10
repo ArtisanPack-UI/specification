@@ -39,7 +39,7 @@ it( 'escapes titles in HTML and Markdown attribution', function (): void {
 it( 'renders the body with attribution in every format', function (): void {
     $rendered = doctypeTopic()->render();
 
-    expect( $rendered->toHtml() )->toContain( '<h1>The HTML doctype</h1>' )
+    expect( $rendered->toHtml() )->toContain( '<h2>The HTML doctype</h2>' )
         ->and( $rendered->toHtml() )->toContain( 'class="spec-attribution"' )
         ->and( (string) $rendered )->toBe( $rendered->toHtml() )
         ->and( $rendered->toMarkdown() )->toStartWith( '# The HTML doctype' )
@@ -155,3 +155,23 @@ it( 'resolves the reference link in the synced fixture topic', function (): void
         ->toContain( 'href="https://html.spec.whatwg.org/multipage/syntax.html#the-doctype"' )
         ->not->toContain( '../references/' );
 } );
+
+it( 'marks rendered topics as English and demotes body headings', function (): void {
+    $html = doctypeTopic()->render()->toHtml();
+
+    expect( $html )->toStartWith( '<div class="spec-topic" lang="en" dir="ltr"' )
+        ->and( $html )->not->toContain( '<h1>' )
+        ->and( $html )->toContain( '<h2>The HTML doctype</h2>' )
+        ->and( $html )->toContain( '<h3>Why it matters</h3>' );
+} );
+
+it( 'honours the configured heading offset', function ( int $offset, string $expected ): void {
+    config()->set( 'artisanpack.specification.render.heading_offset', $offset );
+    app()->forgetInstance( SpecTopicRenderer::class );
+
+    expect( doctypeTopic()->render()->toHtml() )->toContain( $expected );
+} )->with( [
+    'none'    => [ 0, '<h1>The HTML doctype</h1>' ],
+    'two'     => [ 2, '<h3>The HTML doctype</h3>' ],
+    'clamped' => [ 9, '<h6>The HTML doctype</h6>' ],
+] );
