@@ -47,12 +47,12 @@ The `Attribution` class produces all four required elements:
 
 ## Customising the Attribution Wording
 
-The HTML, Markdown, and plain-text sentences use translation strings, so you can localise them. Keep every element (title, link, creator, license, and license link) in the translated sentence.
+The HTML, Markdown, and plain-text sentences use translation strings, so you can localise them, including the quote marks around the title. Keep every element (title, link, creator, license, and license link) in the translated sentence.
 
 ```php
 // lang/de.json
 {
-    ":title from :source, licensed under :license.": ":title von :source, lizenziert unter :license."
+    "“:title” from :source, licensed under :license.": "„:title“ von :source, lizenziert unter :license."
 }
 ```
 
