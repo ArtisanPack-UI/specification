@@ -10,6 +10,7 @@
     <file>src</file>
     <file>tests</file>
     <file>config</file>
+    <file>database</file>
 
     <!-- Exclude paths -->
     <exclude-pattern>*/vendor/*</exclude-pattern>

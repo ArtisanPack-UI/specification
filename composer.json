@@ -35,8 +35,16 @@
   ],
   "require": {
     "php": "^8.3",
+    "ext-pdo_sqlite": "*",
+    "ext-zlib": "*",
+    "illuminate/console": "^13.0",
+    "illuminate/database": "^13.0",
+    "illuminate/filesystem": "^13.0",
+    "illuminate/http": "^13.0",
     "illuminate/support": "^13.0",
-    "artisanpack-ui/core": "^1.0"
+    "artisanpack-ui/core": "^1.0",
+    "league/commonmark": "^2.7",
+    "symfony/yaml": "^7.4|^8.0"
   },
   "require-dev": {
     "artisanpack-ui/code-style": "^1.1",

@@ -5,6 +5,7 @@ declare( strict_types=1 );
 namespace Tests;
 
 use ArtisanPackUI\Specification\SpecificationServiceProvider;
+use Illuminate\Filesystem\Filesystem;
 use Orchestra\Testbench\TestCase as BaseTestCase;
 
 /**
@@ -17,11 +18,28 @@ use Orchestra\Testbench\TestCase as BaseTestCase;
 abstract class TestCase extends BaseTestCase
 {
     /**
+     * Per-test directory for the vendored snapshot.
+     */
+    protected string $specificationStorage = '';
+
+    /**
      * Setup the test environment.
      */
     protected function setUp(): void
     {
         parent::setUp();
+    }
+
+    /**
+     * Clean up the test environment.
+     */
+    protected function tearDown(): void
+    {
+        if ( '' !== $this->specificationStorage ) {
+            ( new Filesystem() )->deleteDirectory( $this->specificationStorage );
+        }
+
+        parent::tearDown();
     }
 
     /**
@@ -60,5 +78,10 @@ abstract class TestCase extends BaseTestCase
             'prefix'                  => '',
             'foreign_key_constraints' => true,
         ] );
+
+        // Keep the snapshot and search index out of the real storage directory.
+        $this->specificationStorage = sys_get_temp_dir() . '/artisanpack-specification-tests-' . bin2hex( random_bytes( 6 ) );
+        $app['config']->set( 'artisanpack.specification.okf.snapshot_path', $this->specificationStorage . '/snapshot' );
+        $app['config']->set( 'artisanpack.specification.index.path', ':memory:' );
     }
 }
